@@ -17,7 +17,9 @@ export function Wiring({ layout, visible, offsets }: { layout: RobotLayout; visi
       {cables.map((c) => (
         <QuadraticBezierLine
           key={c.key} start={c.start} end={c.end} mid={c.mid}
-          color={C.blue} lineWidth={2} toneMapped={false} ref={noRaycast}
+          // Camera ribbons: wide, flat-looking and light grey so they read apart from round wires.
+          color={c.kind === "ribbon" ? C.muted : C.blue} lineWidth={c.kind === "ribbon" ? 5 : 2}
+          toneMapped={false} ref={noRaycast}
         />
       ))}
     </group>

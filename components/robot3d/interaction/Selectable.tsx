@@ -1,19 +1,19 @@
 "use client";
 // Click to select, hover label, and drag on the deck plane for one part.
 import { Html } from "@react-three/drei";
-import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useThree, type RootState, type ThreeEvent } from "@react-three/fiber";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Box3, Plane, Vector3, type Group } from "three";
-import type { RootState } from "@react-three/fiber";
 import { C } from "../theme";
 
 export type DeckBounds = { minX: number; maxX: number; minZ: number; maxZ: number };
 
 type Get = () => RootState;
 
-// Scratch objects reused every frame (render is single-threaded).
+// Scratch objects (three.js work is single-threaded).
 const BOX = new Box3();
 const V = new Vector3();
+const DRAG_MIN_M = 0.001; // pointer travel on the plane before a press counts as a drag
 
 // Imperative side effects on three.js/DOM objects, kept out of render so React's compiler is happy.
 function setCursor(get: Get, cursor: string) {
@@ -23,20 +23,34 @@ function setControls(get: Get, enabled: boolean) {
   const c = get().controls as unknown as { enabled: boolean } | null;
   if (c) c.enabled = enabled;
 }
+/** Puts the label at the top-centre of the part, in the Selectable group's local frame. */
 function placeLabel(group: Group, label: Group) {
+  group.updateWorldMatrix(true, true);
   BOX.setFromObject(group);
   if (BOX.isEmpty()) return;
   BOX.getCenter(V);
   V.y = BOX.max.y;
   label.position.copy(group.worldToLocal(V));
 }
+/**
+ * A drag that ends over empty space is followed by a DOM click, which R3F would report as a
+ * pointer-missed (deselect). Swallow that one click in the capture phase, before R3F sees it.
+ */
+function swallowNextClick() {
+  const stop = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); done(); };
+  const done = () => { window.removeEventListener("click", stop, true); clearTimeout(timer); };
+  window.addEventListener("click", stop, true);
+  const timer = setTimeout(done, 300); // no click came (e.g. released outside the window)
+}
 
 type Drag = {
   pointerId: number;
+  target: { releasePointerCapture?: (id: number) => void; hasPointerCapture?: (id: number) => boolean };
   plane: Plane;
   hit: Vector3;        // where the pointer first hit the part (world)
   centre: Vector3;     // part's bounding-box centre at drag start (world)
   offset: { x: number; y: number };
+  moved: boolean;
 };
 
 const LABEL_STYLE: React.CSSProperties = {
@@ -68,52 +82,72 @@ export function Selectable(p: {
   const group = useRef<Group>(null);
   const label = useRef<Group>(null);
   const drag = useRef<Drag | null>(null);
+  const ownsCursor = useRef(false);
   const [hovered, setHovered] = useState(false);
   const get = useThree((s) => s.get);
   const showLabel = hovered || p.selected;
+  const ox = p.offsetMm?.x ?? 0;
+  const oy = p.offsetMm?.y ?? 0;
 
-  // Keep the label just above the part's top, following drags and the arm moving the tool.
-  useFrame(() => {
+  // Label position is cached: recomputed when it appears, the offset moves the part, or the
+  // children re-render (e.g. the arm extending). The label lives in this group's local frame,
+  // so parents moving it (the arm carrying the tool) need no recompute.
+  useLayoutEffect(() => {
     if (showLabel && group.current && label.current) placeLabel(group.current, label.current);
-  });
+  }, [showLabel, ox, oy, p.children]);
 
-  // Never leave the cursor or the camera controls stuck if the part unmounts mid-hover/drag.
+  const cursor = (c: string) => { setCursor(get, c); ownsCursor.current = c !== ""; };
+
+  const finishDrag = () => {
+    const d = drag.current;
+    if (!d) return;
+    drag.current = null;
+    setControls(get, true);
+    if (d.target.hasPointerCapture?.(d.pointerId)) d.target.releasePointerCapture?.(d.pointerId);
+    return d;
+  };
+
+  // Unmounting mid-drag or mid-hover must not leave the camera locked or the cursor stuck.
   useEffect(() => () => {
-    setCursor(get, "");
-    if (drag.current) setControls(get, true);
+    finishDrag();
+    if (ownsCursor.current) setCursor(get, "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [get]);
 
   const endDrag = (e: ThreeEvent<PointerEvent>) => {
-    const d = drag.current;
-    if (!d || d.pointerId !== e.pointerId) return;
-    drag.current = null;
-    setControls(get, true);
-    const t = e.target as unknown as { hasPointerCapture?: (id: number) => boolean; releasePointerCapture?: (id: number) => void };
-    if (t.hasPointerCapture?.(e.pointerId)) t.releasePointerCapture?.(e.pointerId);
-    setCursor(get, hovered ? "grab" : "");
+    if (drag.current?.pointerId !== e.pointerId) return;
+    const d = finishDrag();
+    if (d?.moved && e.nativeEvent.type === "pointerup") swallowNextClick();
+    cursor(hovered ? "grab" : "");
   };
 
   return (
     <group
       ref={group}
       onClick={(e) => { e.stopPropagation(); p.onSelect(p.id); }}
-      onPointerOver={(e) => { e.stopPropagation(); setHovered(true); setCursor(get, p.draggable ? "grab" : "pointer"); }}
-      onPointerOut={(e) => { e.stopPropagation(); setHovered(false); if (!drag.current) setCursor(get, ""); }}
+      onPointerOver={(e) => { e.stopPropagation(); setHovered(true); cursor(p.draggable ? "grab" : "pointer"); }}
+      onPointerOut={(e) => { e.stopPropagation(); setHovered(false); if (!drag.current) cursor(""); }}
       onPointerDown={(e) => {
         e.stopPropagation();
         if (!p.draggable || !p.onDrag || e.button !== 0 || !group.current) return;
         p.onSelect(p.id);
+        group.current.updateWorldMatrix(true, true);
         BOX.setFromObject(group.current);
+        const target = e.target as unknown as Drag["target"] & { setPointerCapture: (id: number) => void };
         drag.current = {
           pointerId: e.pointerId,
+          target,
           plane: new Plane(new Vector3(0, 1, 0), -e.point.y),
           hit: e.point.clone(),
           centre: BOX.getCenter(new Vector3()),
-          offset: p.offsetMm ?? { x: 0, y: 0 },
+          offset: { x: ox, y: oy },
+          moved: false,
         };
-        (e.target as unknown as { setPointerCapture: (id: number) => void }).setPointerCapture(e.pointerId);
+        target.setPointerCapture(e.pointerId);
+        // R3F's listener is attached before OrbitControls', so this runs before the controls see
+        // the press; their pointermove also bails while disabled, so the camera never rotates.
         setControls(get, false);
-        setCursor(get, "grabbing");
+        cursor("grabbing");
       }}
       onPointerMove={(e) => {
         const d = drag.current;
@@ -121,6 +155,8 @@ export function Selectable(p: {
         e.stopPropagation();
         const at = e.ray.intersectPlane(d.plane, V);
         if (!at) return;
+        if (!d.moved && Math.hypot(at.x - d.hit.x, at.z - d.hit.z) < DRAG_MIN_M) return;
+        d.moved = true;
         let cx = d.centre.x + at.x - d.hit.x;
         let cz = d.centre.z + at.z - d.hit.z;
         if (p.bounds) {
@@ -131,10 +167,10 @@ export function Selectable(p: {
           x: Math.round(d.offset.x + (cx - d.centre.x) * 1000),
           y: Math.round(d.offset.y + (cz - d.centre.z) * 1000),
         };
-        const cur = p.offsetMm ?? { x: 0, y: 0 };
-        if (next.x !== cur.x || next.y !== cur.y) p.onDrag?.(next);
+        if (next.x !== ox || next.y !== oy) p.onDrag?.(next);
       }}
       onPointerUp={endDrag}
+      onPointerCancel={endDrag}
       onLostPointerCapture={endDrag}
     >
       {p.children}
