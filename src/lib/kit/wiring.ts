@@ -5,7 +5,7 @@ import { isBattery, isRegulator, resolveParts } from "../derive";
 import { DRIVER_PIN_ROLES, sensorPinRoles } from "./pi";
 
 /** "GPIO17" -> "GPIO17 = AIN1" using the part's pin roles, so nobody swaps TRIG and ECHO. */
-function labelPins(part: Part | undefined, pins: string[]): string[] {
+export function labelPins(part: Part | undefined, pins: string[]): string[] {
   if (!part) return pins;
   const roles =
     part.category === "motor_driver" ? DRIVER_PIN_ROLES[part.id] :

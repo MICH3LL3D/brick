@@ -45,10 +45,21 @@ Page counts come from the design: a robot with no arm gets no arm book content. 
 
 ## Open for B
 
-1. `POST /api/manual` with `{ design, task }`, returning a `ManualSet` (`source: "gemini"`, or `"template"` when Gemini is down). The viewer calls it now and falls back to the sample set when the route is missing.
+1. ~~`POST /api/manual`~~ Built: see "Manual generator" below.
 2. A `page` context field on `/api/chat`, and an `open_page {book, page}` action so Sprocket can jump the reader to a page.
 3. Older v1 "Build manual" pages (00 to 13) in Paper are superseded by this layout.
 
+## Manual generator (built)
+
+`POST /api/manual { design, task, stream? }` returns a `ManualSet` with `source: "gemini"` (code in `src/lib/manuals/build.ts`). With `stream: true` it sends NDJSON progress lines like `/api/generate`. Without a Gemini key, or in `DEMO_MODE`, it answers 503 and the viewer keeps the sample set. The viewer shows the sample at once and swaps in the generated set when it arrives, with a status line while it works.
+
+- **Code decides** which books and pages exist (no arm: no Arm book; no sensors: no Eyes; no pump or tank: no Water), the parts boxes and quantities, the wires (from `derive.pinMap`, with pin roles from `labelPins`), the power wiring, the 5 V gauge, SEE links, and the Skills slots. A design gets about 18 pages, not the 37 of the sample.
+- **Writer agents** (Gemini, one per book, in parallel) write titles, blurbs, step captions, warnings and the Fix it symptoms. They name which part a panel shows; code attaches that part's photo.
+- **Fact-checker agent** compares every sentence with the catalog data and rewrites unsupported ones.
+- **Photo agents** (brief 8) find and verify product photos for the design's parts. Parts with no verified photo keep the grey placeholder.
+- If one writer fails, its pages fall back to plain text from the slot hints. If the whole route fails, the sample set is shown.
+- Not done: wire diagrams drawn over board photos (the wiring page shows a part photo plus the wire list), pin-1 markers, per-step diagrams.
+
 ## Not built yet
 
-Diagram art, photo attach in chat, "Opens:" tags in chat replies, per-page content for books 1, 3 to 9 beyond the samples.
+Diagram art (wires drawn over board photos), photo attach in chat, "Opens:" tags in chat replies.

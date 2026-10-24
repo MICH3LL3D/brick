@@ -272,6 +272,7 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .b-head { display: flex; justify-content: space-between; align-items: baseline; color: var(--muted); font: 400 12px var(--mono); }
 .b-head h2, .b-title { font: 500 18px/22px var(--sans); letter-spacing: -0.02em; color: var(--text); }
 .b-return { color: var(--text); font: 500 13px var(--sans); }
+.b-note { background: var(--panel); color: var(--muted); border-radius: 8px; padding: 10px 14px; font-size: 13px; }
 .b-warn, .m-warn { background: var(--fail-bg); color: var(--fail); border-radius: 8px; padding: 10px 14px; font-size: 13px; }
 .b-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .b-actions button { height: 40px; padding-inline: 18px; border: 1px solid var(--border); border-radius: 8px; }
@@ -294,6 +295,7 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .m-panel p { font-size: 13px; color: #5b625d; margin-top: 6px; }
 .m-art, .m-photo { width: 100%; aspect-ratio: 4 / 3; border-radius: 8px; background: #EFE9DD; display: grid; place-items: center; color: #8a8f88; font-size: 12px; object-fit: cover; }
 .m-art.tall { aspect-ratio: 16 / 9; }
+.mpage > .m-photo { max-height: 220px; aspect-ratio: auto; object-fit: contain; }
 .m-credit { color: #8a8f88; font: 400 11px var(--mono); }
 .m-gauge { display: flex; gap: 12px; align-items: baseline; }
 .m-gauge b { font: 600 28px var(--mono); }
