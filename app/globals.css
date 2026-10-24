@@ -47,8 +47,8 @@ a { color: inherit; text-decoration: none; }
 .navlink { color: var(--muted); display: flex; gap: 8px; align-items: center; }
 .navlink.on { color: var(--text); font-weight: 500; }
 .badge-fail { color: var(--fail); font-family: var(--mono); font-size: 12px; }
-.cart-btn { position: relative; width: 36px; height: 36px; border-radius: 18px; background: var(--panel); border: 2px solid var(--border); display: grid; place-items: center; }
-.cart-count { position: absolute; top: -6px; left: 22px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--blue); color: var(--on-red); font: 700 11px/18px var(--mono); text-align: center; }
+.cart-btn { position: relative; width: 36px; height: 36px; border-radius: 18px; background: var(--red); border: 2px solid var(--border); display: grid; place-items: center; }
+.cart-count { position: absolute; top: -6px; left: 22px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--gold); color: var(--text); border: 2px solid var(--border); font: 700 11px/18px var(--mono); text-align: center; }
 
 /* history sidebar */
 /* Same path in and out (left edge); width carries the layout, the inner slide and fade carry the feel. */
