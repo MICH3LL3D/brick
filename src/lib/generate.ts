@@ -7,7 +7,7 @@ import { Design, RoutineStep, type Part } from "./contracts";
 import type { Derived, Room, SimResult, Task } from "./data";
 import { deriveAndCheck, failureText } from "./derive";
 import { generateWithFallback, parseJsonText } from "./gemini";
-import { MODELS } from "./models";
+import { GENERATE_THINKING, MODELS } from "./models";
 import { simulate } from "./sim-stub"; // switch to "./sim" when A's sim.ts lands
 
 export const MAX_REPAIRS = 2;
@@ -98,16 +98,17 @@ Rules:
 - Pick targetIds from the room targets that the task is about, in a sensible visit order. If none fit, return an empty list.
 - The routine may only use these ops: ${RoutineStep.shape.op.options.join(", ")}. Use goto <target> before acting on it; end with return_home.
 - Wheeled robots only. If the task cannot be done by a wheeled robot, say so honestly in summary and return the closest feasible design.
-- Do not compute prices or totals; code does that.
+- Keep the sum of part prices at or under the budget, but do not output prices or totals; code does that.
+- Add only parts the task needs. Skip optional extras (extra sensors, cameras for non-photo tasks) when they would push the total near the budget.
 
 Code will check the design. Design to pass these checks:
 - Exactly one controller (Raspberry Pi), one chassis, at most one arm, 1-2 batteries, at least one motor driver.
-- Motor channels: wheels need 2; each linear actuator arm and each DC pump (interface=gpio) needs 1 more. I2C motor HATs give 4 channels, other drivers 2.
-- Parts with interface=pwm (servos) need the PCA9685 servo board.
+- Motor channels: wheels need 2; each linear actuator arm and each DC pump (interface=gpio) needs 1 more. I2C motor HATs give 4 channels, other drivers 2. So a design with a linear actuator arm or a gpio pump needs the 4-channel I2C motor HAT (or two 2-channel drivers).
+- Any chosen part with interface=pwm (servos, servo grippers, pan-tilt mounts) needs the PCA9685 servo board in the design too.
 - The Pi needs 5V at 3A: a 5V step-down regulator (maxCurrentA>=3) fed by a battery above 5.5V. USB power banks give only 2A, which fails.
 - Battery: at least 15 minutes runtime at 80% of batteryWh vs the sum of drawW.
-- Payload: everything except the chassis, plus a full water tank, must be under the chassis maxPayloadG.
-- Reach: tool top = chassis height + arm liftMaxMm + 50mm must be at least each acted target's height. Targets on furniture are up to ~150mm in from the edge: arm reachMm max + 50 must cover that.
+- Payload: everything except the chassis, plus a full water tank, must be under the chassis maxPayloadG. Add up massG: linear actuator arms alone weigh 600-1200 g, so they need a high-payload chassis.
+- Reach: tool top = chassis height + arm liftMaxMm + 50mm must be at least each acted target's height. Targets on furniture are up to ~150mm in from the edge: arm reachMm max + 50 must cover that. Reach applies only to water, pickup, drop and touch targets; photographing needs no arm.
 - Water needs a pump and a tank (100ml per plant). Pickup needs a gripper and an arm lifting at least 700 g. Photograph needs a camera.
 - The robot must fit through a ${Math.max(...room.doorways.map((d) => d.widthMm))}mm doorway with 50mm each side.
 
@@ -123,6 +124,21 @@ function userPrompt(prompt: string, budgetUsd: number): string {
 }
 
 /* ---------- Pipeline ---------- */
+
+/**
+ * Latency: the primary model is often overloaded, so each call is hedged. If it has not
+ * answered after hedgeMs, the fallback starts in parallel and the first schema-valid reply wins.
+ */
+const GENERATE_CALL = {
+  hedgeMs: 5_000,
+  primaryTimeoutMs: 20_000,
+  fallbackTimeoutMs: 25_000,
+  accept: (res: { text?: string }) => GeminiDesign.safeParse(safeJson(res.text ?? "")).success,
+  configFor: (model: string) => {
+    const thinkingLevel = GENERATE_THINKING[model];
+    return thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {};
+  },
+};
 
 export type Attempt = { task: Task; design: Design; derived: Derived; failed: number };
 
@@ -146,7 +162,7 @@ export async function generateDesign(prompt: string, budgetUsd: number, room: Ro
       break;
     }
     attempts++;
-    const res = await generateWithFallback({ model: MODELS.GENERATE, contents, config });
+    const res = await generateWithFallback({ model: MODELS.GENERATE, contents, config }, GENERATE_CALL);
     const text = res.text ?? "";
     contents.push({ role: "model", parts: [{ text: text || "{}" }] }); // empty parts are rejected by the API
 
@@ -166,7 +182,7 @@ export async function generateDesign(prompt: string, budgetUsd: number, room: Ro
     repairNotes.push(failures);
     contents.push({
       role: "user",
-      parts: [{ text: `The design failed these checks:\n${failures}\nFix them by changing parts and reply with the full corrected design as JSON.` }],
+      parts: [{ text: `The design failed these checks:\n${failures}\n${priceHint(attempt, catalog)}Fix them by changing parts, keep the total within the $${budgetUsd} budget, and reply with the full corrected design as JSON.` }],
     });
   }
 
@@ -191,6 +207,18 @@ export function checkWithReasons(design: Design, task: Task, room: Room, catalog
   const missing = design.partIds.filter((id) => !design.reasons[id]);
   if (missing.length) derived.checks.push({ id: "reasons", ok: false, message: `No reason given for: ${[...new Set(missing)].join(", ")}.` });
   return derived;
+}
+
+/** On a budget failure, list the chosen parts by price so the model can see what to swap. */
+function priceHint(attempt: Attempt, catalog: Part[]): string {
+  if (attempt.derived.checks.find((c) => c.id === "budget")?.ok !== false) return "";
+  const byId = new Map(catalog.map((p) => [p.id, p]));
+  const lines = attempt.design.partIds
+    .map((id) => byId.get(id))
+    .filter((p): p is Part => !!p)
+    .sort((a, b) => b.priceUsd - a.priceUsd)
+    .map((p) => `- ${p.id} $${p.priceUsd}`);
+  return `Chosen parts by price:\n${lines.join("\n")}\nSwap expensive parts for cheaper catalog parts that still pass every other check, or drop parts the task does not need.\n`;
 }
 
 function safeJson(text: string): unknown {

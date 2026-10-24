@@ -42,38 +42,127 @@ export function parseJsonText(text: string | undefined): unknown {
 /* ---------- Model fallback ---------- */
 
 const PRIMARY_COOLDOWN_MS = 5 * 60_000;
+/** Hedged mode: a model that was still thinking when another model won is skipped this long. */
+const SLOW_COOLDOWN_MS = 60_000;
 const degradedUntil = new Map<string, number>();
+
+type FallbackOptions = {
+  primaryTimeoutMs?: number;
+  fallbackTimeoutMs?: number;
+  /**
+   * Hedged mode: if the current model has not answered after this many ms, start the next
+   * model in parallel and take whichever answers first (the loser is aborted). A transient
+   * failure starts the next model at once. Omit for the plain sequential walk.
+   */
+  hedgeMs?: number;
+  /** Hedged mode only: a response that fails this test does not win; the race goes on. */
+  accept?: (res: GenerateContentResponse) => boolean;
+  /** Extra config for one model in the chain (e.g. its thinking level). */
+  configFor?: (model: string) => GenerateContentParameters["config"];
+};
 
 /**
  * Calls `params.model`, then on timeout, overload (5xx) or quota (429) walks down
  * MODELS.FALLBACK and MODELS.FALLBACK_2, once each. A model that failed is skipped for
  * 5 minutes so later calls do not wait on it again. The last model is always tried.
+ * With `hedgeMs`, slow models are raced against the next one instead of waited on.
  */
 export async function generateWithFallback(
   params: GenerateContentParameters,
-  { primaryTimeoutMs = 25_000, fallbackTimeoutMs = 45_000 } = {},
+  { primaryTimeoutMs = 25_000, fallbackTimeoutMs = 45_000, hedgeMs, accept, configFor }: FallbackOptions = {},
 ): Promise<GenerateContentResponse & { modelUsed: string }> {
   const ai = getGemini();
-  const chain = [...new Set([params.model, MODELS.FALLBACK, MODELS.FALLBACK_2])];
-  const run = async (model: string, ms: number) => {
-    const res = await ai.models.generateContent({ ...params, model, config: { ...params.config, abortSignal: geminiTimeout(ms) } });
+  const full = [...new Set([params.model, MODELS.FALLBACK, MODELS.FALLBACK_2])];
+  const chain = full.filter((m, i) => i === full.length - 1 || (degradedUntil.get(m) ?? 0) <= Date.now());
+  const run = async (model: string, signal: AbortSignal) => {
+    const res = await ai.models.generateContent({ ...params, model, config: { ...params.config, ...configFor?.(model), abortSignal: signal } });
     return Object.assign(res, { modelUsed: model });
   };
+  const timeoutFor = (model: string) => (model === params.model ? primaryTimeoutMs : fallbackTimeoutMs);
+  const fail = (model: string, e: unknown, next: string | undefined) => {
+    console.warn(`[gemini] ${model} unavailable (${(e as Error).message.slice(0, 80)})${next ? `; trying ${next}` : ""}`);
+    degradedUntil.set(model, Date.now() + PRIMARY_COOLDOWN_MS);
+  };
 
-  let lastError: unknown;
-  for (const [i, model] of chain.entries()) {
-    const last = i === chain.length - 1;
-    if (!last && (degradedUntil.get(model) ?? 0) > Date.now()) continue;
-    try {
-      return await run(model, i === 0 ? primaryTimeoutMs : fallbackTimeoutMs);
-    } catch (e) {
-      if (!isTransient(e)) throw e;
-      lastError = e;
-      console.warn(`[gemini] ${model} unavailable (${(e as Error).message.slice(0, 80)})${last ? "" : `; trying ${chain[i + 1]}`}`);
-      degradedUntil.set(model, Date.now() + PRIMARY_COOLDOWN_MS);
+  if (hedgeMs === undefined) {
+    let lastError: unknown;
+    for (const [i, model] of chain.entries()) {
+      try {
+        return await run(model, geminiTimeout(timeoutFor(model)));
+      } catch (e) {
+        if (!isTransient(e)) throw e;
+        lastError = e;
+        fail(model, e, chain[i + 1]);
+      }
     }
+    throw lastError;
   }
-  throw lastError;
+
+  return new Promise((resolve, reject) => {
+    const controllers: { abort: (slow: boolean) => void }[] = [];
+    let next = 0;
+    let pending = 0;
+    let done = false;
+    let lastError: unknown = new Error("No Gemini model answered");
+    let hedgeTimer: ReturnType<typeof setTimeout> | undefined;
+    let unusable: (GenerateContentResponse & { modelUsed: string }) | undefined;
+
+    const finish = (err: unknown, res?: GenerateContentResponse & { modelUsed: string }) => {
+      if (done) return;
+      done = true;
+      clearTimeout(hedgeTimer);
+      for (const c of controllers) c.abort(Boolean(res));
+      if (res) resolve(res);
+      else reject(err);
+    };
+    const launch = () => {
+      clearTimeout(hedgeTimer);
+      if (done || next >= chain.length) return;
+      const model = chain[next++];
+      // One controller per call, aborted by its own timer or by the winner. (AbortSignal.any
+      // over a timeout signal did not reliably fire here, so the timer is explicit.)
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(new Error(`${model} timed out`)), timeoutFor(model));
+      let lost = false;
+      let settled = false;
+      controllers.push({
+        abort: (slow) => {
+          if (settled) return;
+          lost = true;
+          if (slow) degradedUntil.set(model, Math.max(degradedUntil.get(model) ?? 0, Date.now() + SLOW_COOLDOWN_MS));
+          ctrl.abort();
+        },
+      });
+      pending++;
+      if (next < chain.length) hedgeTimer = setTimeout(launch, hedgeMs);
+      run(model, ctrl.signal)
+        .finally(() => {
+          clearTimeout(timer);
+          settled = true;
+        })
+        .then(
+          (res) => {
+            pending--;
+            if (done) return;
+            if (!accept || accept(res)) return finish(null, res);
+            console.warn(`[gemini] ${model} returned an unusable response`);
+            unusable ??= res;
+            if (next < chain.length) launch();
+            else if (pending === 0) finish(null, unusable); // nothing better is coming; let the caller repair it
+          },
+          (e) => {
+            pending--;
+            if (done || lost) return;
+            if (!isTransient(e)) return finish(e);
+            lastError = e;
+            fail(model, e, chain[next]);
+            if (next < chain.length) launch();
+            else if (pending === 0) finish(lastError, unusable);
+          },
+        );
+    };
+    launch();
+  });
 }
 
 function isTransient(e: unknown): boolean {
