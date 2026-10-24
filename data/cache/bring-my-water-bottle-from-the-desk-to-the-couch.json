@@ -1,0 +1,70 @@
+{
+  "prompt": "Bring my water bottle from the desk to the couch",
+  "recordedAt": "2026-10-24T18:16:04.856Z",
+  "origin": "gemini",
+  "task": {
+    "prompt": "Bring my water bottle from the desk to the couch",
+    "targetIds": [
+      "bottle-desk",
+      "couch-drop"
+    ]
+  },
+  "design": {
+    "summary": "A 4WD Raspberry Pi robot equipped with a high-reach linear actuator arm and servo gripper to fetch the water bottle from the desk and drop it at the couch.",
+    "partIds": [
+      "pi4b-4gb",
+      "chassis-4wd-m",
+      "arm-lact10p",
+      "tool-gripper",
+      "servo-pca9685",
+      "md-tb6612",
+      "md-tb6612",
+      "bat-nimh-2200",
+      "reg-5v-3a"
+    ],
+    "reasons": {
+      "pi4b-4gb": "Provides processing power and GPIO connectivity to control all robot sub-systems.",
+      "chassis-4wd-m": "Offers sufficient deck height and weight capacity to support the heavy linear actuator arm.",
+      "arm-lact10p": "Lifts up to 2000g and provides the necessary vertical extension to reach the 760mm high desk.",
+      "tool-gripper": "Grasps and holds the water bottle during transport.",
+      "servo-pca9685": "Provides PWM control signals for the servo-driven gripper tool.",
+      "md-tb6612": "Drives two motor channels for drive wheels and linear actuator operation.",
+      "bat-nimh-2200": "Delivers 7.2V power with high current capacity for extended runtime.",
+      "reg-5v-3a": "Steps down the 7.2V battery voltage to a steady 5V at 3.2A to reliably power the Raspberry Pi."
+    },
+    "routine": [
+      {
+        "op": "goto",
+        "target": "bottle-desk"
+      },
+      {
+        "op": "extend_arm"
+      },
+      {
+        "op": "grip"
+      },
+      {
+        "op": "retract_arm"
+      },
+      {
+        "op": "goto",
+        "target": "couch-drop"
+      },
+      {
+        "op": "extend_arm"
+      },
+      {
+        "op": "release"
+      },
+      {
+        "op": "retract_arm"
+      },
+      {
+        "op": "return_home"
+      }
+    ],
+    "budgetUsd": 500
+  },
+  "attempts": 1,
+  "repairNotes": []
+}
