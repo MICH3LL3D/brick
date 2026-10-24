@@ -10,9 +10,9 @@ export type MastPose = {
   tubeH: number;         // outer tube height
   rodTop: number;        // top of the inner rod (wrist pivot height)
   wristLen: number;      // wrist link length (= reachMaxM)
-  wristYaw: number;      // rad about +y; 0 = straight forward, >0 folds the tip toward the robot's right (-z)
+  wristPitch: number;    // rad about +z; 0 = level and straight forward, >0 folds the tip up over the mast
   tip: [number, number]; // tool mount point [x forward, y up]
-  tipZ: number;          // sideways offset of the tool mount (-z = right)
+  tipZ: number;          // always 0: the wrist swings in the robot's centre plane
 };
 
 /** Fixed servo arm: turret, shoulder link, elbow link. */
@@ -36,11 +36,16 @@ export function mastPose(rig: ArmRig, extend: number): MastPose {
   const lift = Math.max(tubeH, rig.liftMaxM);
   const rodTop = lerp(tubeH, lift, t);
   const wristLen = Math.max(rig.reachMaxM, 0.02);
-  // Reach x = L cos(yaw): reachMin at t=0 (wrist folded sideways), reachMax at t=1 (straight ahead).
-  // A level, yawing wrist keeps the tip height monotonic, never above liftMaxM, and clear of the tube.
+  // Reach x = L cos(pitch): at t=0 the wrist is folded up so the tool sits over the mast (x = reachMin),
+  // at t=1 it is level and straight ahead (x = reachMax, tip at liftMaxM). The fold is capped so the tip
+  // never rises above liftMaxM (short-stroke masts then rest a little further forward than reachMin).
   const minRatio = Math.min(1, Math.max(0, rig.reachMinM) / wristLen);
-  const yaw = lerp(Math.acos(minRatio), 0, t);
-  return { kind: "mast", tubeH, rodTop, wristLen, wristYaw: yaw, tip: [wristLen * Math.cos(yaw), rodTop], tipZ: -wristLen * Math.sin(yaw) };
+  const headroom = Math.min(1, Math.max(0, (lift - rodTop) / wristLen));
+  const pitch = Math.min(lerp(Math.acos(minRatio), 0, t), Math.asin(headroom));
+  return {
+    kind: "mast", tubeH, rodTop, wristLen, wristPitch: pitch,
+    tip: [wristLen * Math.cos(pitch), rodTop + wristLen * Math.sin(pitch)], tipZ: 0,
+  };
 }
 
 /** Link lengths and the two key poses for a fixed servo arm. */
@@ -77,7 +82,10 @@ export function armPose(rig: ArmRig, extend: number): ArmPose {
   return rig.extendable ? mastPose(rig, extend) : servoPose(rig, extend);
 }
 
-/** Live numbers for the overlay: forward reach and tool-mount height above the mount, in mm. */
+/**
+ * Live numbers for the overlay, in mm: forward reach and arm lift (tool-mount height above the deck),
+ * i.e. the same quantities as the catalog's reachMm and liftMaxMm. derive.ts adds a 50 mm tool allowance on top.
+ */
 export function armReadout(rig: ArmRig, extend: number): { reachMm: number; liftMm: number } {
   const p = armPose(rig, extend);
   return { reachMm: Math.round(p.tip[0] * 1000), liftMm: Math.round(p.tip[1] * 1000) };

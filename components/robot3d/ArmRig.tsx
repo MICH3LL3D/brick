@@ -2,7 +2,7 @@
 // TASK B owns this file: arm geometry and extend/retract animation.
 // Pose math lives in ./arm/kinematics.ts (pure); this file draws it and springs `extend`.
 import { useFrame } from "@react-three/fiber";
-import { useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 import * as THREE from "three";
 import type { ArmRig as Rig } from "@/lib/robot3d/layout";
 import { armReadout, mastPose, servoPose } from "./arm/kinematics";
@@ -52,12 +52,20 @@ function useSpring(target: number, resetKey: unknown, apply: (v: number) => void
 }
 
 /** Faint dashed line from the tool tip to the floor, in theme blue. */
-function makeDropLine() {
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(6), 3));
-  const m = new THREE.LineDashedMaterial({ color: C.blue, dashSize: 0.012, gapSize: 0.01, transparent: true, opacity: 0.55 });
-  const line = new THREE.Line(g, m);
-  line.raycast = () => {}; // never steal clicks
+function useDropLine() {
+  const line = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(6), 3));
+    const m = new THREE.LineDashedMaterial({ color: C.blue, dashSize: 0.012, gapSize: 0.01, transparent: true, opacity: 0.55 });
+    const l = new THREE.Line(g, m);
+    l.raycast = () => {}; // never steal clicks
+    return l;
+  }, []);
+  // Free GPU buffers on unmount. Under StrictMode's dev remount three.js re-uploads on the next render.
+  useEffect(() => () => {
+    line.geometry.dispose();
+    (line.material as THREE.Material).dispose();
+  }, [line]);
   return line;
 }
 function setDropLine(line: THREE.Line | null, x: number, y: number, z: number, floorY: number) {
@@ -80,7 +88,7 @@ export function ArmRig({ rig, extend, tool }: { rig: Rig; extend: number; tool?:
     : <ServoArm rig={rig} extend={extend} tool={tool} />;
 }
 
-/* Linear actuator mast: outer tube, telescoping rod, yawing servo wrist with the tool on its end. */
+/* Linear actuator mast: outer tube, telescoping rod, pitching servo wrist with the tool on its end. */
 function MastArm({ rig, extend, tool }: { rig: Rig; extend: number; tool?: ReactNode }) {
   const [bx, tubeH, bz] = rig.baseSize;
   const rodR = Math.max(0.004, Math.min(bx, bz) * 0.22);
@@ -91,7 +99,7 @@ function MastArm({ rig, extend, tool }: { rig: Rig; extend: number; tool?: React
   const wristRef = useRef<THREE.Group>(null);
   const linkRef = useRef<THREE.Mesh>(null);
   const toolRef = useRef<THREE.Group>(null);
-  const [line] = useState(makeDropLine);
+  const line = useDropLine();
   const lineRef = useRef<THREE.Line>(null);
 
   useSpring(extend, rig, (v) => {
@@ -101,7 +109,7 @@ function MastArm({ rig, extend, tool }: { rig: Rig; extend: number; tool?: React
     rodRef.current?.position.set(0, (bottom + top) / 2, 0);
     rodRef.current?.scale.set(1, top - bottom, 1);
     wristRef.current?.position.set(0, p.rodTop, 0);
-    wristRef.current?.rotation.set(0, p.wristYaw, 0);
+    wristRef.current?.rotation.set(0, 0, p.wristPitch);
     linkRef.current?.scale.set(p.wristLen, 1, 1);
     linkRef.current?.position.set(p.wristLen / 2, -linkT / 2, 0);
     toolRef.current?.position.set(p.tip[0], p.tip[1], p.tipZ);
@@ -156,7 +164,7 @@ function ServoArm({ rig, extend, tool }: { rig: Rig; extend: number; tool?: Reac
   const shoulderRef = useRef<THREE.Group>(null);
   const elbowRef = useRef<THREE.Group>(null);
   const toolRef = useRef<THREE.Group>(null);
-  const [line] = useState(makeDropLine);
+  const line = useDropLine();
   const lineRef = useRef<THREE.Line>(null);
 
   useSpring(extend, rig, (v) => {
@@ -234,13 +242,14 @@ export function ArmControls({ extend, onExtend, rig }: { extend: number; onExten
       <label htmlFor={id} style={{ color: C.muted, letterSpacing: "0.04em", textTransform: "uppercase", fontSize: 11 }}>Arm</label>
       <input
         id={id} type="range" min={0} max={1} step={0.01} value={extend}
-        aria-valuetext={out ? `${pct}% extended, reach ${out.reachMm} mm, lift ${out.liftMm} mm` : `${pct}% extended`}
+        aria-valuetext={out ? `${pct}% extended, reach ${out.reachMm} mm, arm lift ${out.liftMm} mm above deck` : `${pct}% extended`}
         onChange={(e) => onExtend(Number(e.target.value))}
         style={{ width: 120, accentColor: C.gold, cursor: "pointer" }}
       />
       <button
         type="button"
         onClick={() => onExtend(extended ? 0 : 1)}
+        aria-label="Extend arm"
         aria-pressed={extended}
         style={{
           padding: "4px 10px", borderRadius: 6, cursor: "pointer", font: "inherit",
@@ -250,8 +259,8 @@ export function ArmControls({ extend, onExtend, rig }: { extend: number; onExten
         {extended ? "Retract" : "Extend"}
       </button>
       {out && (
-        <span aria-live="polite" style={{ color: C.muted, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
-          reach <span style={{ color: C.blue }}>{out.reachMm}</span> mm · lift <span style={{ color: C.blue }}>{out.liftMm}</span> mm
+        <span title="Tool mount height above the deck (catalog liftMaxMm). The tool adds about 50 mm on top." style={{ color: C.muted, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+          reach <span style={{ color: C.blue }}>{out.reachMm}</span> mm · arm lift <span style={{ color: C.blue }}>{out.liftMm}</span> mm
         </span>
       )}
     </div>
