@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Part } from "@/lib/contracts";
-import { downloadKit, exportCsv, generate, getCatalog, getManuals, getRoom, rebudget } from "@/lib/api";
+import type { z } from "zod";
+import { Task, type Design, type Part } from "@/lib/contracts";
+import { downloadKit, exportCsv, generate, getCatalog, getManuals, getRoom, rebudget, type ChatActionT } from "@/lib/api";
+import { deriveAndCheck } from "@/lib/derive";
 import { sumUsd } from "@/lib/money";
 import { STUB_CATALOG, STUB_ROOM, type Result } from "@/lib/stub";
 import { SUPPLIES } from "@/lib/supplies";
@@ -18,10 +20,11 @@ import { SimView } from "./SimView";
 import { TopBar, type Tab } from "./TopBar";
 import { BuildView } from "./BuildView";
 import { SAMPLE_MANUALS } from "@/lib/manual-sample";
+import { OwlChat } from "./OwlChat";
 import type { Mode } from "./ModeSwitch";
 import type { ManualSetT } from "@/lib/manual-format";
 
-type Robot = Result & { id: string; name: string; prompt: string; cart: string[] };
+type Robot = Result & { id: string; name: string; prompt: string; cart: string[]; task: z.infer<typeof Task> };
 type Undo = { robotId: string; partId: string };
 
 const baseId = (key: string) => key.replace(/#\d+$/, ""); // 3D keys duplicate parts as id#2
@@ -96,7 +99,9 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
     }
     const res = out.result;
     const id = crypto.randomUUID();
-    setRobots((rs) => [...rs, { ...res, id, name: titleOf(text), prompt: text, cart: [...res.design.partIds, ...SUPPLIES.map((x) => x.id)] }]);
+    const t = Task.safeParse(res.task);
+    const task = t.success ? t.data : { prompt: text, targetIds: [] };
+    setRobots((rs) => [...rs, { ...res, task, id, name: titleOf(text), prompt: text, cart: [...res.design.partIds, ...SUPPLIES.map((x) => x.id)] }]);
     setCurrentId(id);
     setBusy(false);
   }, []);
@@ -148,6 +153,38 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
     const ids = current.design.partIds.map((i) => (i === part.id ? alt.id : i));
     patch(current.id, (r) => ({ ...r, cart: r.cart.map((i) => (i === part.id ? alt.id : i)), design: { ...r.design, partIds: ids, reasons: { ...r.design.reasons, [alt.id]: r.design.reasons[part.id] ?? "" } }, derived: { ...r.derived, totalUsd: totalOf(ids) } }));
     setSelectedId(alt.id);
+  };
+
+  // Re-run the checks in the browser (derive is pure) so owl edits update totals and checks; the sim stays as generated.
+  const rederive = (r: Robot, design: Design): Robot => ({ ...r, design, derived: deriveAndCheck(design, r.task, room, catalog) });
+
+  const applyChatAction = async (a: ChatActionT): Promise<string> => {
+    if (!current) return "No robot to change yet.";
+    if (a.type === "set_budget") {
+      const v = Math.min(500, Math.max(50, Math.round(a.budgetUsd)));
+      setBudget(v);
+      const res = await rebudget(current.design, v);
+      // shortcut: /api/rebudget is not built, so rebudget() returns stub parts; keep the real parts and only move the budget.
+      const real = res.design.partIds.every((i) => catalog.some((p) => p.id === i));
+      patch(current.id, (r) => (real ? { ...r, ...res, cart: [...res.design.partIds, ...SUPPLIES.map((x) => x.id)] } : rederive(r, { ...r.design, budgetUsd: v })));
+      return `Budget set to $${v}`;
+    }
+    if (a.type === "swap_part") {
+      const out = catalog.find((p) => p.id === a.removeId);
+      const inn = catalog.find((p) => p.id === a.addId);
+      if (!out || !current.design.partIds.includes(a.removeId)) return `Couldn't swap: ${out?.name ?? a.removeId} isn't in this design`;
+      if (!inn) return `Couldn't swap: ${a.addId} isn't in the catalog`;
+      if (inn.category !== out.category) return `Couldn't swap: ${inn.name} isn't a ${out.category}`;
+      if (current.design.partIds.includes(inn.id)) return `Couldn't swap: ${inn.name} is already in the design`;
+      patch(current.id, (r) => ({
+        ...rederive(r, { ...r.design, partIds: r.design.partIds.map((i) => (i === out.id ? inn.id : i)), reasons: { ...r.design.reasons, [inn.id]: r.design.reasons[out.id] ?? "" } }),
+        cart: r.cart.map((i) => (i === out.id ? inn.id : i)),
+      }));
+      if (selectedId && baseId(selectedId) === out.id) setSelectedId(inn.id);
+      return `Swapped ${out.name} for ${inn.name}`;
+    }
+    void run(`${current.prompt}. ${a.instruction}`, budget);
+    return `Redesigning: ${a.instruction}`;
   };
 
   const cartParts = current ? partsOf(current.cart) : [];
@@ -226,6 +263,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
               )}
             </>
           )}
+          {!busy && current && tab === "robot" && <OwlChat robotKey={current.id} design={current.design} task={current.task} onAction={applyChatAction} right={checksOpen ? 396 : 28} />}
           {!busy && current && tab === "sim" && <SimView room={room} sim={current.sim} />}
           {!busy && current && checksOpen && <ChecksPanel derived={current.derived} onLimits={() => setLimitsOpen(!limitsOpen)} />}
           {undo && (
