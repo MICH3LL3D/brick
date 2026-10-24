@@ -1,0 +1,143 @@
+[
+  {
+    "id": "book-shelf",
+    "prompt": "Grab a hardcover book from the middle shelf of my bookshelf and bring it to me on the couch",
+    "budgetUsd": 500,
+    "expect": {
+      "feasible": true,
+      "needs": { "reachHeightMm": [600, 1400], "gripWidthMm": [15, 80], "liftMassG": [200, 1500] },
+      "mustInclude": [{ "category": "arm" }, { "anyOf": ["tool-gripper"] }],
+      "mustNotInclude": ["tool-pump-*", "tank-*"]
+    }
+  },
+  {
+    "id": "fetch-drink",
+    "prompt": "Fetch a can of soda from the coffee table and bring it to my desk",
+    "budgetUsd": 400,
+    "expect": {
+      "feasible": true,
+      "needs": { "reachHeightMm": [300, 1000], "gripWidthMm": [50, 90], "liftMassG": [250, 600] },
+      "mustInclude": [{ "anyOf": ["tool-gripper"] }],
+      "mustNotInclude": ["tool-pump-*", "tank-*"]
+    }
+  },
+  {
+    "id": "water-floor-plants",
+    "prompt": "Water the three potted plants on my living room floor every morning",
+    "budgetUsd": 300,
+    "expect": {
+      "feasible": true,
+      "needs": { "liquidMl": [100, 1000], "reachHeightMm": [0, 600], "liftMassG": [0, 0] },
+      "mustInclude": [{ "anyOf": ["tool-pump-peristaltic", "tool-pump-submersible", "tool-pump-gravity"] }, { "anyOf": ["tank-500", "tank-1000"] }],
+      "mustNotInclude": ["tool-gripper"]
+    }
+  },
+  {
+    "id": "water-windowsill",
+    "prompt": "Water the herb pots on my living room windowsill",
+    "budgetUsd": 500,
+    "expect": {
+      "feasible": true,
+      "needs": { "liquidMl": [50, 1000], "reachHeightMm": [600, 1300] },
+      "mustInclude": [{ "anyOf": ["tool-pump-peristaltic", "tool-pump-submersible", "tool-pump-gravity"] }, { "category": "arm" }],
+      "mustNotInclude": ["tool-gripper"]
+    }
+  },
+  {
+    "id": "photo-rooms",
+    "prompt": "Drive around the house and take photos of every room so I can check on things while I'm away",
+    "budgetUsd": 250,
+    "expect": {
+      "feasible": true,
+      "needs": { "needsCamera": true, "liquidMl": [0, 0], "liftMassG": [0, 0], "gripWidthMm": [0, 0] },
+      "mustInclude": [{ "anyOf": ["cam-pi3", "cam-pi3-wide"] }],
+      "mustNotInclude": ["tank-*", "tool-pump-*", "tool-gripper", "arm"]
+    }
+  },
+  {
+    "id": "under-couch",
+    "prompt": "Check under the couch and bed for my lost earbuds",
+    "budgetUsd": 250,
+    "expect": {
+      "feasible": true,
+      "needs": { "needsCamera": true, "maxWidthMm": [1, 400], "liquidMl": [0, 0] },
+      "mustInclude": [{ "anyOf": ["cam-pi3", "cam-pi3-wide"] }],
+      "mustNotInclude": ["tank-*", "tool-pump-*", "arm"]
+    }
+  },
+  {
+    "id": "carry-groceries",
+    "prompt": "Carry a bag of groceries from the front door to the kitchen",
+    "budgetUsd": 400,
+    "expect": {
+      "feasible": true,
+      "needs": { "carryMassG": [1000, 10000], "liquidMl": [0, 0] },
+      "mustNotInclude": ["tank-*", "tool-pump-*"]
+    }
+  },
+  {
+    "id": "feed-cat",
+    "prompt": "Bring a scoop of dry food to my cat's bowl in the kitchen at 7am",
+    "budgetUsd": 300,
+    "expect": {
+      "feasible": true,
+      "needs": { "liquidMl": [0, 0], "carryMassG": [20, 1000] },
+      "mustNotInclude": ["tank-*"]
+    }
+  },
+  {
+    "id": "night-patrol",
+    "prompt": "Patrol the ground floor at night and send me a picture if something moves",
+    "budgetUsd": 300,
+    "expect": {
+      "feasible": true,
+      "needs": { "needsCamera": true, "needsDistanceSensor": true, "runtimeMin": [20, 600], "liquidMl": [0, 0] },
+      "mustInclude": [{ "anyOf": ["cam-pi3", "cam-pi3-wide"] }],
+      "mustNotInclude": ["tank-*", "tool-pump-*", "tool-gripper"]
+    }
+  },
+  {
+    "id": "deliver-mail",
+    "prompt": "Carry today's letters from the hallway table across the room to my desk",
+    "budgetUsd": 400,
+    "expect": {
+      "feasible": true,
+      "needs": { "carryMassG": [0, 1000], "liftMassG": [0, 500], "liquidMl": [0, 0] },
+      "mustNotInclude": ["tank-*", "tool-pump-*"]
+    }
+  },
+  {
+    "id": "clean-gutters",
+    "prompt": "Clean the leaves out of the gutters on my roof",
+    "budgetUsd": 500,
+    "expect": { "feasible": false }
+  },
+  {
+    "id": "climb-stairs",
+    "prompt": "Carry my laundry basket up the stairs to the bedroom",
+    "budgetUsd": 500,
+    "expect": { "feasible": false }
+  },
+  {
+    "id": "mow-lawn",
+    "prompt": "Mow my backyard lawn every Saturday",
+    "budgetUsd": 500,
+    "expect": { "feasible": false, "mustNotInclude": ["tank-*"] }
+  },
+  {
+    "id": "vague-help",
+    "prompt": "help me around the house",
+    "budgetUsd": 300,
+    "expect": {
+      "needs": { "liquidMl": [0, 2000], "reachHeightMm": [0, 1500] }
+    }
+  },
+  {
+    "id": "vague-cool",
+    "prompt": "make me a cool robot",
+    "budgetUsd": 200,
+    "expect": {
+      "needs": { "liquidMl": [0, 0], "liftMassG": [0, 1000] }
+    }
+  }
+]
