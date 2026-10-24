@@ -6,7 +6,7 @@ import { bookMeta, type BookIdT, type ManualSetT } from "@/lib/manual-format";
 import { BRAND } from "@/lib/brand";
 import { ManualPage } from "./ManualPage";
 import type { Mode } from "./ModeSwitch";
-import { SprocketChat } from "./SprocketChat";
+import { BrickChat } from "./BrickChat";
 import { BrandSide } from "./TopBar";
 
 type Pos = { book: BookIdT; page: number };
@@ -38,7 +38,7 @@ export function BuildView({ manuals, pending, status = "", design, prompt, onMod
         <div className="b-body">
           <nav className="b-list" aria-label="Manuals"><h4>MANUALS</h4></nav>
           <main className="b-view">{pending}</main>
-          <SprocketChat where="Manuals" design={design} prompt={prompt} />
+          <BrickChat where="Manuals" design={design} prompt={prompt} />
         </div>
       </div>
     );
@@ -116,7 +116,7 @@ export function BuildView({ manuals, pending, status = "", design, prompt, onMod
             )}
           </div>
         </main>
-        <SprocketChat where={inSkill ? `Skills · ${page.title}` : where} design={design} prompt={prompt} />
+        <BrickChat where={inSkill ? `Skills · ${page.title}` : where} design={design} prompt={prompt} />
       </div>
       <span hidden style={{ color: meta.color }} />
     </div>

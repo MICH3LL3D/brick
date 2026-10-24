@@ -10,7 +10,7 @@ Read first: docs/DECISIONS.md, src/lib/contracts.ts. Do not edit contracts.ts; a
   2. Run `deriveAndCheck` (from brief 3) on the design. If any check fails, send the failure messages back to Gemini and retry. Max 2 retries.
   3. Return { task, design, derived, sim }. If still failing, return the best attempt with its failed checks visible. Never hide failures.
 - System prompt rules: use only given part ids; prefer the cheapest valid design under budget; every chosen part gets a one-sentence reason; routine prefers the known ops (`KNOWN_OPS` in contracts.ts) but may invent a short snake_case op when none fits (the kit emits a TODO stub for it); if the task cannot be done with wheeled robots, say so in `summary` and return the closest feasible design.
-- src/lib/chat.ts: `chat(messages, design, task)` using function calling with the ChatAction tools (set_budget, swap_part, regenerate). The chatbot is cute, short, plain-English, never invents prices, and says "I'm not sure" when unsure. Placeholder persona name: Sprocket.
+- src/lib/chat.ts: `chat(messages, design, task)` using function calling with the ChatAction tools (set_budget, swap_part, regenerate). The chatbot is cute, short, plain-English, never invents prices, and says "I'm not sure" when unsure. Placeholder persona name: Brick.
 - Routes: app/api/generate/route.ts, app/api/chat/route.ts. Validate all input and output with zod.
 - DEMO_MODE=1 env flag: return cached JSON from data/cache/*.json for the 3 demo prompts so the demo survives bad wifi. Record the cache from real runs.
 

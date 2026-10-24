@@ -115,8 +115,8 @@ export async function getManuals(design: Design, prompt: string, onProgress?: (t
   }
 }
 
-/** Sprocket in the Build view. Uses POST /api/chat; says so plainly when it can't answer. */
-export async function askSprocket(messages: { role: "user" | "assistant"; content: string }[], design: Design | null, prompt: string): Promise<string> {
+/** Brick in the Build view. Uses POST /api/chat; says so plainly when it can't answer. */
+export async function askBrick(messages: { role: "user" | "assistant"; content: string }[], design: Design | null, prompt: string): Promise<string> {
   if (!design) return "Generate a robot in Design mode first, then I can help with its build.";
   try {
     const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages, design, task: { prompt, targetIds: [] } }) });

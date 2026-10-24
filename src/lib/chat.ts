@@ -1,4 +1,4 @@
-// Sprocket, the chat assistant. Explains the design and edits it through function calls.
+// Brick, the chat assistant. Explains the design and edits it through function calls.
 // Gemini never computes prices or checks: actions go back to the app, and swaps are re-checked here.
 import "server-only";
 import type { Content, FunctionDeclaration } from "@google/genai";
@@ -14,7 +14,7 @@ export type ChatMessage = z.infer<typeof ChatMessage>;
 export type ChatActionT = z.infer<typeof ChatAction>;
 export type ChatResult = { reply: string; actions: ChatActionT[]; source: "gemini" | "offline" };
 
-export const BOT_NAME = "Sprocket";
+export const BOT_NAME = "Brick";
 
 /* ---------- Tools ---------- */
 
