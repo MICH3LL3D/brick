@@ -18,21 +18,44 @@ async function post<T>(url: string, body: unknown, fallback: () => T): Promise<T
 export type GenerateOutcome = { ok: true; result: Result & { task?: unknown } } | { ok: false; error: string };
 
 /** No stub fallback: if the backend did not design a robot, say why instead of showing a fake one. */
-export async function generate(prompt: string, budgetUsd: number): Promise<GenerateOutcome> {
+export async function generate(prompt: string, budgetUsd: number, onProgress?: (text: string) => void): Promise<GenerateOutcome> {
   let res: Response;
   try {
     // The route stops repairing after ~60 s; give it headroom, then fail visibly instead of spinning.
-    res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt, budgetUsd }), signal: AbortSignal.timeout(90_000) });
+    res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt, budgetUsd, stream: true }), signal: AbortSignal.timeout(120_000) });
   } catch (e) {
-    const timedOut = e instanceof DOMException && e.name === "TimeoutError";
-    return { ok: false, error: timedOut ? "The design took too long. Please try again." : "Couldn’t reach the design service. Check that the app server is running." };
+    return { ok: false, error: timeoutOr(e, "Couldn’t reach the design service. Check that the app server is running.") };
   }
-  const body = await res.json().catch(() => null);
-  if (!res.ok || !body?.design) {
+  if (!res.ok || !res.body) {
+    const body = await res.json().catch(() => null);
     return { ok: false, error: typeof body?.error === "string" ? body.error : `The design service failed (HTTP ${res.status}).` };
   }
-  return { ok: true, result: body };
+  // NDJSON: {"progress"} lines, then one {"result"} or {"error"} line.
+  let out: GenerateOutcome = { ok: false, error: "The design service ended without an answer." };
+  const read = (line: string) => {
+    if (!line.trim()) return;
+    const msg = JSON.parse(line);
+    if (typeof msg.progress === "string") onProgress?.(msg.progress);
+    else if (msg.result?.design) out = { ok: true, result: msg.result };
+    else if (typeof msg.error === "string") out = { ok: false, error: msg.error };
+  };
+  try {
+    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buf = "";
+    for (let r = await reader.read(); !r.done; r = await reader.read()) {
+      const parts = (buf + r.value).split("\n");
+      buf = parts.pop() ?? "";
+      parts.forEach(read);
+    }
+    read(buf);
+  } catch (e) {
+    return { ok: false, error: timeoutOr(e, "The connection dropped while designing. Please try again.") };
+  }
+  return out;
 }
+
+const timeoutOr = (e: unknown, fallback: string) =>
+  e instanceof DOMException && e.name === "TimeoutError" ? "The design took too long. Please try again." : fallback;
 
 export const rebudget = (design: Design, budgetUsd: number) =>
   post<Result>("/api/rebudget", { design, budgetUsd }, () => stubResult(budgetUsd));
@@ -73,6 +96,30 @@ export async function getManuals(design: Design | null, prompt: string): Promise
   const raw = await post<unknown>("/api/manual", { design, task: { prompt, targetIds: [] } }, () => SAMPLE_MANUALS);
   const ok = ManualSet.safeParse(raw);
   return ok.success ? ok.data : SAMPLE_MANUALS;
+}
+
+type Photo = { src: string; credit: string };
+
+/**
+ * Fills empty art slots in the parts boxes with verified product photos (POST /api/part-images).
+ * Slow the first time (agents search and check), instant after. Any failure returns the set unchanged.
+ */
+export async function attachPartImages(set: ManualSetT, design: Design | null): Promise<ManualSetT> {
+  if (!design) return set;
+  const labels = new Set<string>();
+  for (const b of set.books) for (const pg of b.pages) for (const it of [...pg.parts, ...(pg.kind === "parts" ? pg.items : [])]) if (!it.art) labels.add(it.label);
+  try {
+    const res = await fetch("/api/part-images", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ partIds: [...new Set(design.partIds)], labels: [...labels] }), signal: AbortSignal.timeout(120_000) });
+    if (!res.ok) return set;
+    const { images, labels: map } = (await res.json()) as { images: Record<string, Photo>; labels: Record<string, string> };
+    const fill = <T extends { label: string; art?: unknown }>(it: T): T => {
+      const img = images[map[it.label]];
+      return it.art || !img ? it : { ...it, art: { kind: "photo" as const, src: img.src, credit: img.credit } };
+    };
+    return { ...set, books: set.books.map((b) => ({ ...b, pages: b.pages.map((pg) => ({ ...pg, parts: pg.parts.map(fill), ...(pg.kind === "parts" ? { items: pg.items.map(fill) } : {}) })) })) } as ManualSetT;
+  } catch {
+    return set;
+  }
 }
 
 /** Sprocket in the Build view. Uses POST /api/chat; says so plainly when it can't answer. */

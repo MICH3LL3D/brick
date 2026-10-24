@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --conditions=react-server --test src/lib/*.test.ts src/lib/kit/*.test.ts src/lib/robot3d/*.test.ts"
+    "test": "node --import tsx --conditions=react-server --test src/lib/*.test.ts src/lib/agents/*.test.ts src/lib/kit/*.test.ts src/lib/robot3d/*.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.31.0",

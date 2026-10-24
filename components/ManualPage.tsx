@@ -28,7 +28,7 @@ export function ManualPage({ page, total, onOpen }: { page: ManualPageT; total: 
         {intro && <h2 className="m-h1">{page.title}</h2>}
         {page.parts.length > 0 && (
           <div className="m-partsbox">
-            {page.parts.map((p) => <div key={p.label}><b>{p.qty}x</b><span>{p.label}</span></div>)}
+            {page.parts.map((p) => <div key={p.label}><b>{p.qty}x</b>{p.art?.kind === "photo" && /* eslint-disable-next-line @next/next/no-img-element */ <img className="m-thumb" src={p.art.src} alt="" />}<span>{p.label}</span></div>)}
           </div>
         )}
       </div>

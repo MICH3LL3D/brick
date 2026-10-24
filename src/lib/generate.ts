@@ -73,7 +73,7 @@ export const GeminiDesign = z.object({
 
 /* ---------- Prompts ---------- */
 
-function catalogLines(catalog: Part[]): string {
+export function catalogLines(catalog: Part[]): string {
   return catalog
     .map((p) => {
       const caps = Object.entries(p.caps)

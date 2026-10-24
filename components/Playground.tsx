@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Part } from "@/lib/contracts";
-import { downloadKit, exportCsv, generate, getCatalog, getManuals, getRoom, rebudget } from "@/lib/api";
+import { attachPartImages, downloadKit, exportCsv, generate, getCatalog, getManuals, getRoom, rebudget } from "@/lib/api";
 import { sumUsd } from "@/lib/money";
 import { STUB_CATALOG, STUB_ROOM, type Result } from "@/lib/stub";
 import { SUPPLIES } from "@/lib/supplies";
@@ -35,6 +35,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState(initialPrompt);
   const [budget, setBudget] = useState(initialBudget);
+  const [progress, setProgress] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [catalog, setCatalog] = useState<Part[]>(STUB_CATALOG);
   const [room, setRoom] = useState(STUB_ROOM);
@@ -58,7 +59,13 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   useEffect(() => {
     if (mode !== "build" || manuals) return;
     let live = true;
-    getManuals(robots.find((r) => r.id === currentId)?.design ?? null, prompt).then((m) => live && setManuals(m));
+    const design = robots.find((r) => r.id === currentId)?.design ?? null;
+    getManuals(design, prompt).then((m) => {
+      if (!live) return;
+      setManuals(m);
+      // setManuals(m) re-runs this effect and clears `live`, so the photo step checks the title instead.
+      attachPartImages(m, design).then((withPhotos) => setManuals((cur) => (cur?.title === withPhotos.title ? withPhotos : cur)));
+    });
     return () => { live = false; };
   }, [mode, manuals, robots, currentId, prompt]);
 
@@ -74,7 +81,8 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
     setSelectedId(null);
     setCurrentId(null);
     setGenError(null);
-    const out = await generate(text, b);
+    setProgress([]);
+    const out = await generate(text, b, (line) => setProgress((p) => [...p, line]));
     if (!out.ok) {
       setGenError({ message: out.error, prompt: text, budget: b });
       setBusy(false);
@@ -187,7 +195,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
             onRename={(id, name) => patch(id, (r) => ({ ...r, name }))}
           />
         <main className="stage">
-          {busy && <LoadingView prompt={prompt} />}
+          {busy && <LoadingView prompt={prompt} progress={progress} />}
           {!busy && !current && genError && <ErrorView message={genError.message} onRetry={() => run(genError.prompt, genError.budget)} />}
           {!busy && !current && !genError && <EmptyView />}
           {!busy && current && tab === "robot" && (
