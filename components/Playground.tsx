@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Part } from "@/lib/contracts";
 import { downloadKit, exportCsv, generate, getCatalog, getRoom, rebudget } from "@/lib/api";
+import { sumUsd } from "@/lib/money";
 import { STUB_CATALOG, STUB_ROOM, type Result } from "@/lib/stub";
 import { SUPPLIES } from "@/lib/supplies";
 import { CartDrawer } from "./CartDrawer";
 import { HistorySidebar } from "./HistorySidebar";
 import { ALL_LAYERS, LayersPanel, type Layers } from "./LayersPanel";
-import { EmptyView, LoadingView } from "./LoadingView";
+import { EmptyView, ErrorView, LoadingView } from "./LoadingView";
 import { PartCard } from "./PartCard";
 import { PromptBar } from "./PromptBar";
 import type { Offsets } from "./RobotPreview";
@@ -45,6 +46,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const [limitsOpen, setLimitsOpen] = useState(false);
   const [undo, setUndo] = useState<Undo | null>(null);
   const [note, setNote] = useState("");
+  const [genError, setGenError] = useState<{ message: string; prompt: string; budget: number } | null>(null);
   const [kitBusy, setKitBusy] = useState(false);
   const undoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const budgetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -53,7 +55,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const current = robots.find((r) => r.id === currentId) ?? null;
   const partsOf = useCallback((ids: string[]) => ids.map((i) => catalog.find((p) => p.id === i) ?? SUPPLIES.find((p) => p.id === i)).filter((p): p is Part => !!p), [catalog]);
   const parts = useMemo(() => (current ? partsOf(current.design.partIds) : []), [current, partsOf]);
-  const totalOf = (ids: string[]) => partsOf(ids).reduce((s, p) => s + p.priceUsd, 0);
+  const totalOf = (ids: string[]) => sumUsd(partsOf(ids).map((p) => p.priceUsd));
 
   const patch = (id: string, f: (r: Robot) => Robot) => setRobots((rs) => rs.map((r) => (r.id === id ? f(r) : r)));
 
@@ -61,7 +63,14 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
     setBusy(true);
     setSelectedId(null);
     setCurrentId(null);
-    const res = await generate(text, b);
+    setGenError(null);
+    const out = await generate(text, b);
+    if (!out.ok) {
+      setGenError({ message: out.error, prompt: text, budget: b });
+      setBusy(false);
+      return;
+    }
+    const res = out.result;
     const id = crypto.randomUUID();
     setRobots((rs) => [...rs, { ...res, id, name: titleOf(text), prompt: text, offsets: {}, offsets3d: {}, cart: [...res.design.partIds, ...SUPPLIES.map((x) => x.id)] }]);
     setCurrentId(id);
@@ -137,7 +146,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
       <div className="pop-anchor">
         <TopBar
           tab={tab} onTab={setTab} checksOpen={checksOpen} onChecks={() => setChecksOpen(!checksOpen)} failed={failed}
-          cartCount={cartParts.length} onCart={() => setCartOpen(true)}
+          cartCount={cartParts.length} onCart={() => setCartOpen(!cartOpen)}
           historyOpen={historyOpen} onHistory={() => setHistoryOpen(!historyOpen)}
         />
         {limitsOpen && (
@@ -153,18 +162,18 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
       </div>
 
       <div className="body">
-        {historyOpen && (
-          <HistorySidebar
+        <HistorySidebar
+          open={historyOpen}
             items={robots.map((r) => ({ id: r.id, name: r.name, totalUsd: r.derived.totalUsd, parts: r.design.partIds.length }))}
             currentId={currentId}
             onPick={(id) => { setCurrentId(id); setSelectedId(null); }}
-            onNew={() => { setCurrentId(null); setPrompt(""); setChecksOpen(false); }}
+            onNew={() => { setCurrentId(null); setGenError(null); setPrompt(""); setChecksOpen(false); }}
             onRename={(id, name) => patch(id, (r) => ({ ...r, name }))}
           />
-        )}
         <main className="stage">
           {busy && <LoadingView prompt={prompt} />}
-          {!busy && !current && <EmptyView />}
+          {!busy && !current && genError && <ErrorView message={genError.message} onRetry={() => run(genError.prompt, genError.budget)} />}
+          {!busy && !current && !genError && <EmptyView />}
           {!busy && current && tab === "robot" && (
             <>
               <div className="preview" style={{ right: checksOpen ? 396 : 0 }}>

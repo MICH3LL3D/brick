@@ -13,8 +13,24 @@ async function post<T>(url: string, body: unknown, fallback: () => T): Promise<T
   }
 }
 
-export const generate = (prompt: string, budgetUsd: number) =>
-  post<Result & { task?: unknown }>("/api/generate", { prompt, budgetUsd }, () => stubResult(budgetUsd));
+export type GenerateOutcome = { ok: true; result: Result & { task?: unknown } } | { ok: false; error: string };
+
+/** No stub fallback: if the backend did not design a robot, say why instead of showing a fake one. */
+export async function generate(prompt: string, budgetUsd: number): Promise<GenerateOutcome> {
+  let res: Response;
+  try {
+    // The route stops repairing after ~60 s; give it headroom, then fail visibly instead of spinning.
+    res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt, budgetUsd }), signal: AbortSignal.timeout(90_000) });
+  } catch (e) {
+    const timedOut = e instanceof DOMException && e.name === "TimeoutError";
+    return { ok: false, error: timedOut ? "The design took too long. Please try again." : "Couldn’t reach the design service. Check that the app server is running." };
+  }
+  const body = await res.json().catch(() => null);
+  if (!res.ok || !body?.design) {
+    return { ok: false, error: typeof body?.error === "string" ? body.error : `The design service failed (HTTP ${res.status}).` };
+  }
+  return { ok: true, result: body };
+}
 
 export const rebudget = (design: Design, budgetUsd: number) =>
   post<Result>("/api/rebudget", { design, budgetUsd }, () => stubResult(budgetUsd));
