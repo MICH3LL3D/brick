@@ -130,15 +130,21 @@ export function layoutRobot(parts: Part[]): RobotLayout {
 
   // Deck full: stack each leftover part on the lowest part whose top it fits on, like boards on
   // standoffs. Tall parts (tanks) are never used as a base, so nothing floats above them.
-  const tops = items.map((it) => ({ it, top: it.pos[1] + it.size[1] / 2, flat: it.size[1] <= 0.05 }));
+  // Only deck parts can be a base (never nose sensors), and a tall part such as a tank never is.
+  const tops = items
+    .filter((it) => it.role === "deck")
+    .map((it) => ({ it, top: it.pos[1] + it.size[1] / 2, flat: it.size[1] <= 0.05 && !(it.part.caps.tankMl ?? 0) }));
   for (const p of overflow) {
     const s = sizeOf(p);
+    const byTop = (m: (typeof tops)[number], n: (typeof tops)[number]) => m.top - n.top;
     const fits = (t: (typeof tops)[number]) => t.flat && t.it.size[0] >= s[0] * 0.6 && t.it.size[2] >= s[2] * 0.6;
-    const base = [...tops].filter(fits).sort((m, n) => m.top - n.top)[0] ?? [...tops].sort((m, n) => m.top - n.top)[0];
-    const y = (base?.top ?? deckY) + GAP;
-    const placed: Placed = { key: keyOf(p), part: p, role: "deck", pos: [base ? base.it.pos[0] : 0, y + s[1] / 2, base ? base.it.pos[2] : 0], size: s };
-    items.push(placed);
-    if (base) { base.top = y + s[1]; base.flat = s[1] <= 0.05; }
+    const base = tops.filter(fits).sort(byTop)[0] ?? tops.filter((t) => t.flat).sort(byTop)[0];
+    // No flat base at all: sit on the deck at the back (may overlap; a real build would need a bigger chassis).
+    const y = base ? base.top + GAP : deckY;
+    const pos: Vec3 = base ? [base.it.pos[0], y + s[1] / 2, base.it.pos[2]] : [-cl / 2 + s[0] / 2 + GAP, y + s[1] / 2, 0];
+    items.push({ key: keyOf(p), part: p, role: "deck", pos, size: s });
+    // The stack's new top is flat only if this part is thin, and a tall base stays non-base forever.
+    if (base) { base.top = y + s[1]; base.flat = base.flat && s[1] <= 0.05; }
   }
 
   const top = Math.max(

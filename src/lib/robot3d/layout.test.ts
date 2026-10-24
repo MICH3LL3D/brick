@@ -75,9 +75,21 @@ test("stacked deck parts rest on another part, never above a tank", () => {
     for (const it of deck) {
       const bottom = it.pos[1] - it.size[1] / 2;
       if (Math.abs(bottom - l.deckY) < 1e-6) continue;
-      const support = deck.find((o) => o !== it && Math.abs(o.pos[1] + o.size[1] / 2 + 0.006 - bottom) < 1e-6);
+      const support = l.items.find((o) => o !== it && Math.abs(o.pos[1] + o.size[1] / 2 + 0.006 - bottom) < 1e-6);
+      assert.equal(support?.role, "deck", `${it.key} rests on a non-deck part`);
       assert.ok(support, `${it.key} floats`);
       assert.ok((support.part.caps.tankMl ?? 0) === 0, `${it.key} sits on a tank`);
     }
+  }
+});
+
+test("overflow never stacks on a tank or a nose sensor, even when the deck is crowded", () => {
+  const ids = ["chassis-2wd-s", "arm-lact10p", "tank-1000", "tank-500", "us-rcwl1601", "pi5-4gb", "bat-nimh-2200", "md-motor-hat", "servo-pca9685", "adc-ads1115", "reg-5v-5a", "imu-bno055"];
+  const l = layoutRobot(ids.map((id) => byId.get(id)!));
+  for (const it of l.items.filter((i) => i.role === "deck")) {
+    const bottom = it.pos[1] - it.size[1] / 2;
+    if (Math.abs(bottom - l.deckY) < 1e-6) continue;
+    const support = l.items.find((o) => o !== it && Math.abs(o.pos[1] + o.size[1] / 2 + 0.006 - bottom) < 1e-6);
+    assert.ok(support && support.role === "deck" && !(support.part.caps.tankMl ?? 0), `${it.key} badly supported`);
   }
 });

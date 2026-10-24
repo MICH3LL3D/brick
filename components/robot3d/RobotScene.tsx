@@ -31,12 +31,13 @@ export function RobotScene(p: SceneProps) {
   const span = Math.max(...layout.bounds, 0.2);
   const MM = 0.001;
   const chassisSize = layout.chassis?.size;
-  // Keep a dragged part's centre over the deck, inset by half its own size.
+  // Keep a dragged part over the deck and behind the arm base, inset by half its own size.
+  const deckFront = chassisSize && (layout.arm ? layout.arm.mount[0] - layout.arm.baseSize[0] / 2 : chassisSize[0] / 2);
   const boundsFor = (size: [number, number, number]): DeckBounds | undefined =>
-    chassisSize && {
-      minX: -chassisSize[0] / 2 + size[0] / 2, maxX: chassisSize[0] / 2 - size[0] / 2,
+    chassisSize && deckFront !== undefined ? {
+      minX: -chassisSize[0] / 2 + size[0] / 2, maxX: Math.max(-chassisSize[0] / 2 + size[0] / 2, deckFront - size[0] / 2),
       minZ: -chassisSize[2] / 2 + size[2] / 2, maxZ: chassisSize[2] / 2 - size[2] / 2,
-    };
+    } : undefined;
 
   const toolNode = layout.tool && (
     <Selectable id={layout.tool.part.id} label={layout.tool.part.name} selected={p.selectedId === layout.tool.part.id} onSelect={p.onSelect}>
