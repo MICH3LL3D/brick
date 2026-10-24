@@ -10,13 +10,17 @@ import { ALL_LAYERS, LayersPanel, type Layers } from "./LayersPanel";
 import { EmptyView, LoadingView } from "./LoadingView";
 import { PartCard } from "./PartCard";
 import { PromptBar } from "./PromptBar";
-import { RobotPreview, type Offsets } from "./RobotPreview";
+import type { Offsets } from "./RobotPreview";
+import { Viewer } from "./robot3d/Viewer";
 import { ChecksPanel } from "./ChecksPanel";
 import { SimView } from "./SimView";
 import { TopBar, type Tab } from "./TopBar";
 
-type Robot = Result & { id: string; name: string; prompt: string; offsets: Offsets; cart: string[] };
+type Robot = Result & { id: string; name: string; prompt: string; offsets: Offsets; offsets3d: Offsets; cart: string[] };
 type Undo = { robotId: string; partId: string };
+
+const baseId = (key: string) => key.replace(/#\d+$/, ""); // 3D keys duplicate parts as id#2
+const dropKeys = (o: Offsets, id: string) => Object.fromEntries(Object.entries(o).filter(([k]) => baseId(k) !== id));
 
 const titleOf = (prompt: string) => {
   const t = prompt.trim().split(/\s+/).slice(0, 3).join(" ");
@@ -58,7 +62,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
     setCurrentId(null);
     const res = await generate(text, b);
     const id = crypto.randomUUID();
-    setRobots((rs) => [...rs, { ...res, id, name: titleOf(text), prompt: text, offsets: {}, cart: res.design.partIds }]);
+    setRobots((rs) => [...rs, { ...res, id, name: titleOf(text), prompt: text, offsets: {}, offsets3d: {}, cart: res.design.partIds }]);
     setCurrentId(id);
     setBusy(false);
   }, []);
@@ -86,7 +90,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const removePart = (partId: string) => {
     if (!current) return;
     const ids = current.design.partIds.filter((i) => i !== partId);
-    patch(current.id, (r) => ({ ...r, cart: r.cart.filter((i) => i !== partId), design: { ...r.design, partIds: ids }, derived: { ...r.derived, totalUsd: totalOf(ids) } }));
+    patch(current.id, (r) => ({ ...r, offsets: dropKeys(r.offsets, partId), offsets3d: dropKeys(r.offsets3d, partId), cart: r.cart.filter((i) => i !== partId), design: { ...r.design, partIds: ids }, derived: { ...r.derived, totalUsd: totalOf(ids) } }));
     setSelectedId(null);
     setUndo({ robotId: current.id, partId });
     clearTimeout(undoTimer.current);
@@ -123,7 +127,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
     setNote(ok ? "" : "Build kit isn’t available yet. Try again once the kit service is running.");
   };
 
-  const selected = parts.find((p) => p.id === selectedId) ?? null;
+  const selected = parts.find((p) => selectedId !== null && p.id === baseId(selectedId)) ?? null;
   const failed = current?.derived.checks.filter((c) => !c.ok).length ?? 0;
   const arm = parts.find((p) => p.category === "arm");
 
@@ -163,21 +167,22 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
           {!busy && current && tab === "robot" && (
             <>
               <div className="preview" style={{ right: checksOpen ? 396 : 0 }}>
-                <RobotPreview
-                  parts={parts} layers={layers} selectedId={selectedId} offsets={current.offsets}
-                  onSelect={setSelectedId} onMove={(id, o) => patch(current.id, (r) => ({ ...r, offsets: { ...r.offsets, [id]: o } }))}
+                <Viewer
+                  parts={parts} layers={layers} selectedId={selectedId} offsets2d={current.offsets} offsets3d={current.offsets3d} onSelect={setSelectedId}
+                  onMove2d={(id, o) => patch(current.id, (r) => ({ ...r, offsets: { ...r.offsets, [id]: o } }))}
+                  onMove3d={(id, o) => patch(current.id, (r) => ({ ...r, offsets3d: { ...r.offsets3d, [id]: o } }))}
                 />
               </div>
               <LayersPanel name={current.name} onName={(name) => patch(current.id, (r) => ({ ...r, name }))} layers={layers} onLayers={setLayers} />
               {arm?.caps.reachMm && <div className="reach"><div>Arm reach</div><div>{arm.caps.reachMm.max} mm</div></div>}
               {!layers.shell && <p className="hint">Click a part to select it. Drag to move it.</p>}
               {selected && (
-                <div style={{ position: "absolute", right: checksOpen ? 380 : 28, top: 0 }}>
+                <div style={{ position: "absolute", right: checksOpen ? 380 : 28, top: 0, width: 240 }}>
                   <PartCard
                     part={selected} reason={current.design.reasons[selected.id]}
                     inCart={current.cart.includes(selected.id)} onCart={() => toggleCart(selected.id)}
                     onSwap={() => swapPart(selected)}
-                    onReset={() => patch(current.id, (r) => { const o = { ...r.offsets }; delete o[selected.id]; return { ...r, offsets: o }; })}
+                    onReset={() => patch(current.id, (r) => ({ ...r, offsets: dropKeys(r.offsets, selected.id), offsets3d: dropKeys(r.offsets3d, selected.id) }))}
                     onDelete={() => removePart(selected.id)}
                   />
                 </div>
