@@ -220,7 +220,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
           tab={tab} onTab={setTab} checksOpen={checksOpen} onChecks={() => setChecksOpen(!checksOpen)} failed={failed}
           cartCount={cartParts.length} onCart={() => setCartOpen(!cartOpen)}
           historyOpen={historyOpen} onHistory={() => setHistoryOpen(!historyOpen)}
-          mode={mode} onMode={setMode}
+          mode={mode} onMode={setMode} canBuild={!!current}
         />
         {limitsOpen && (
           <div className="pop" role="dialog" aria-label="Limitations" style={{ top: 56 }}>
