@@ -1,12 +1,12 @@
 # Brief 4: App shell, UI, budget slider, chat panel
 
-Read first: docs/DECISIONS.md, src/lib/contracts.ts. Load the frontend-design skill before designing. No project name anywhere; use a neutral header like "Robot Playground" as a placeholder string in ONE constant.
+Read first: docs/DECISIONS.md, src/lib/contracts.ts. Load the frontend-design skill before designing. The product is named athena1; keep the name in ONE constant (`src/lib/brand.ts`) and never hardcode it elsewhere.
 
 ## Build
 - Next.js app with one main page, three regions:
   - Left: prompt box, example prompt chips (the 3 demo prompts), budget slider ($50-$500, shows dollar value), Generate button, loading state with plain progress text.
   - Center: tabs for 3D Robot and Simulation (use RobotPreview and SimView from brief 3; stub them until they land).
-  - Right: tabs for Buy List and Checks, then a chat panel (cute assistant, placeholder name Sprocket, small friendly avatar, short bubbles).
+  - Right: Checks panel (top bar toggle); the buy list is the cart drawer. Then a chat panel (cute assistant, placeholder name Sprocket, small friendly avatar, short bubbles).
 - Buy list: table of parts with name, vendor link, price, reason (from design.reasons), a "verified" badge, total, and Download CSV. Failed checks shown in plain English, never hidden.
 - Slider: on release call POST /api/rebudget (debounce 150 ms while dragging, show the delta in parts changed and total cost). No Gemini call.
 - Chat: POST /api/chat, apply returned `actions` (set_budget moves the slider; swap_part and regenerate update the design) and show a short note on what changed. Message history in React state.
