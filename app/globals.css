@@ -189,7 +189,7 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .steps .now .dot { background: var(--gold); border-color: var(--gold); animation: pulse 1.2s ease-in-out infinite; }
 .steps .done { color: var(--blue); width: 16px; }
 /* 3.2 s loop: look left at 0.5 s, right at 1.1 s, centre at 1.7 s, blink at 2.0 s (matches the Paper motion spec) */
-.owl-blink .eyes { animation: look 3.2s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+.owl-blink .eyes, .owl-blink .beak { animation: look 3.2s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
 .owl-blink .eye { transform-origin: center; transform-box: fill-box; animation: blink 3.2s ease-in-out infinite; }
 
 /* simulation */
