@@ -78,7 +78,8 @@ function hardware(design: Design, derived: Derived, catalog: Part[]): Hardware {
       if (part.category === "arm") servo.arm = pca;
       else if (isGripper(part)) servo.gripper = pca;
       else if (isPump(part)) servo.pump = pca;
-      else servo.pan_tilt = pca;
+      else if (part.id === "tool-cam-pantilt") servo.pan_tilt = pca;
+      else servo[part.id.replace(/-/g, "_")] = pca; // unknown servo part: listed in config, no driver yet
     }
     if (part.category === "sensor" && part.caps.interface === "gpio") {
       // Key by id plus a counter so two identical sensors both keep their pins.
@@ -476,12 +477,25 @@ class PanTilt:
         channels = config.SERVO_CHANNELS.get("pan_tilt", [])
         self.pan = channels[0] if len(channels) > 0 else None
         self.tilt = channels[1] if len(channels) > 1 else None
+        if self.pan is None or self.tilt is None:
+            print("pan/tilt: expected 2 servo channels in config.SERVO_CHANNELS['pan_tilt'], got %s" % channels)
+        self.angles = {}
+
+    def _move(self, channel, target, step=5):
+        # Ramp in small steps so the first move does not snap the mount.
+        current = self.angles.get(channel, CENTER)
+        while abs(target - current) > step:
+            current += step if target > current else -step
+            kit().servo[channel].angle = current
+            time.sleep(0.02)
+        kit().servo[channel].angle = target
+        self.angles[channel] = target
 
     def look(self, pan=0, tilt=0):
         if self.pan is not None:
-            kit().servo[self.pan].angle = CENTER + _clamp(pan, PAN_LIMIT)
+            self._move(self.pan, CENTER + _clamp(pan, PAN_LIMIT))
         if self.tilt is not None:
-            kit().servo[self.tilt].angle = CENTER + _clamp(tilt, TILT_LIMIT)
+            self._move(self.tilt, CENTER + _clamp(tilt, TILT_LIMIT))
         time.sleep(0.4)  # let the camera settle before a photo
 
     def center(self):

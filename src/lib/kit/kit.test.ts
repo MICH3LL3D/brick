@@ -17,7 +17,7 @@ import { wiringMd } from "./wiring";
 const catalog = loadCatalog();
 const room = loadRoom();
 
-const CACHE_DIR = join(process.cwd(), "data/cache");
+const CACHE_DIR = join(__dirname, "../../../data/cache");
 const demos = readdirSync(CACHE_DIR)
   .filter((f) => f.endsWith(".json"))
   .map((f) => {
