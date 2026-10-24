@@ -1,15 +1,29 @@
 "use client";
 // 3D robot viewer: react-three-fiber scene built from the design's catalog parts.
 // Layout math lives in src/lib/robot3d/layout.ts; meshes, arm and interaction are separate files.
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
-import { useMemo, useState } from "react";
-import { layoutRobot } from "@/lib/robot3d/layout";
+import { useEffect, useMemo, useState } from "react";
+import { layoutRobot, type Vec3 } from "@/lib/robot3d/layout";
 import { ArmControls, ArmRig } from "./ArmRig";
 import { Selectable, Wiring } from "./Interaction";
 import { ChassisMesh, PartMesh, WheelMesh } from "./PartMesh";
 import { C } from "./theme";
 import type { SceneProps } from "./types";
+
+/** Re-frames the camera whenever the robot changes size (the Canvas camera prop is only read once). */
+function CameraFit({ bounds }: { bounds: Vec3 }) {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as unknown as { target: { set: (x: number, y: number, z: number) => void }; update: () => void } | null;
+  const [bx, by, bz] = bounds;
+  useEffect(() => {
+    const span = Math.max(bx, by, bz, 0.2);
+    camera.position.set(span * 1.5, span * 1.1, span * 1.5);
+    controls?.target.set(0, by / 2, 0);
+    controls?.update();
+  }, [camera, controls, bx, by, bz]);
+  return null;
+}
 
 export function RobotScene(p: SceneProps) {
   const layout = useMemo(() => layoutRobot(p.parts), [p.parts]);
@@ -69,6 +83,7 @@ export function RobotScene(p: SceneProps) {
 
         <Wiring layout={layout} visible={p.layers.wiring} />
         <OrbitControls makeDefault target={[0, layout.bounds[1] / 2, 0]} minDistance={0.15} maxDistance={4} />
+        <CameraFit bounds={layout.bounds} />
       </Canvas>
       {layout.arm && <ArmControls extend={extend} onExtend={setExtend} />}
     </div>
