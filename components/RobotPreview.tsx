@@ -102,7 +102,7 @@ export function RobotPreview(p: { parts: Part[]; layers: Layers; selectedId: str
 
       {p.layers.parts && (
         <g fontFamily="var(--mono)" fontSize="7" textAnchor="middle">
-          {p.parts.filter((x) => placed.has(x.id) && (open || !inside(x))).map((x) => {
+          {p.parts.filter((x) => placed.has(x.id)).map((x) => {
             const b = placed.get(x.id)!, o = p.offsets[x.id] ?? { x: 0, y: 0 }, on = sel(x.id);
             return (
               <g key={x.id} className="part" transform={`translate(${o.x} ${o.y})`} onPointerDown={(e) => down(e, x.id, true)} onPointerMove={move} onPointerUp={up} role="button" aria-label={x.name}>
