@@ -6,7 +6,7 @@ import { Brick } from "./Logo";
 const STEPS = ["Reading your task", "Picking parts from the catalog", "Checking pins, power and reach"];
 
 /** `progress` is live text from the agents; with none (cached or offline demo) the generic steps play instead. */
-export function LoadingView({ prompt, progress = [] }: { prompt: string; progress?: string[] }) {
+export function LoadingView({ prompt, progress = [], title = "Designing your robot" }: { prompt: string; progress?: string[]; title?: string }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setI((n) => Math.min(n + 1, STEPS.length - 1)), 1400);
@@ -15,7 +15,7 @@ export function LoadingView({ prompt, progress = [] }: { prompt: string; progres
   return (
     <div className="center" role="status">
       <Brick size={140} blink />
-      <h2>Designing your robot</h2>
+      <h2>{title}</h2>
       <p className="muted">{prompt}</p>
       {progress.length > 0 ? (
         <ul className="steps" aria-live="polite">
@@ -49,12 +49,12 @@ export function ErrorView({ message, onRetry }: { message: string; onRetry: () =
   );
 }
 
-export function EmptyView() {
+export function EmptyView({ message = "Describe a task below, or try one of the examples." }: { message?: string }) {
   return (
     <div className="center">
       <Brick size={120} blink />
       <h2>What should your robot do?</h2>
-      <p className="muted">Describe a task below, or try one of the examples.</p>
+      <p className="muted">{message}</p>
     </div>
   );
 }

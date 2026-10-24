@@ -182,7 +182,8 @@ ${designParts.map((p) => `- ${shortName(p)}`).join("\n")}`;
 
 /* ---------- Assembly ---------- */
 
-export async function generateManuals(design: Design, derived: Derived, catalog: Part[], say: Say = () => {}): Promise<ManualSetT> {
+/** `offline` (no Gemini key, or demo mode): code writes the whole manual from slot hints, with part drawings in place of photos. */
+export async function generateManuals(design: Design, derived: Derived, catalog: Part[], say: Say = () => {}, offline = false): Promise<ManualSetT> {
   const r = resolveParts(design, catalog);
   const designParts = [...new Map(r.parts.map((p) => [p.id, p])).values()];
   const qty = (id: string) => design.partIds.filter((i) => i === id).length;
@@ -190,8 +191,9 @@ export async function generateManuals(design: Design, derived: Derived, catalog:
   const allSlots = plans.flatMap((p) => p.slots.map((s) => s.id));
   say(`Manual planner: laying out ${plans.length} books for your robot…`);
 
-  const photos = findPartImages(designParts, say).catch((): Record<string, PartImage> => ({}));
+  const photos = offline ? Promise.resolve({} as Record<string, PartImage>) : findPartImages(designParts, say).catch((): Record<string, PartImage> => ({}));
   const written = await Promise.all(plans.map(async (plan) => {
+    if (offline) return undefined;
     say(`Writer agent (${bookName(plan.id)}): writing the pages…`);
     try {
       const out = await writeBook(plan, design, catalog, allSlots, designParts);
@@ -204,7 +206,7 @@ export async function generateManuals(design: Design, derived: Derived, catalog:
     }
   }));
   const images = await photos;
-  say(`Photo agents: ${Object.keys(images).length} of ${designParts.length} parts have a verified photo.`);
+  if (!offline) say(`Photo agents: ${Object.keys(images).length} of ${designParts.length} parts have a verified photo.`);
 
   const w0 = written[0];
   const titleOf = new Map(plans.flatMap((p) => p.slots.map((s) => [s.id, clip(written[plans.indexOf(p)]?.pages.find((w) => w.slot === s.id)?.title, 40) || s.title] as const)));
@@ -245,12 +247,12 @@ export async function generateManuals(design: Design, derived: Derived, catalog:
     });
   });
 
-  await factCheck(pages, design, designParts, allWires, say);
+  if (!offline) await factCheck(pages, design, designParts, allWires, say);
 
   const set = ManualSet.parse({
     title: clip(w0?.manualTitle, 80) || clip(design.summary, 80),
-    subtitle: `${clip(w0?.subtitle, 150) || "Written for your robot."} The build kit is untested on hardware.`, // honest label is added by code, not the model
-    source: "gemini",
+    subtitle: `${clip(w0?.subtitle, 150) || (offline ? "Built from your parts list, without Gemini." : "Written for your robot.")} The build kit is untested on hardware.`, // honest label is added by code, not the model
+    source: offline ? "template" : "gemini",
     books: plans.map((plan) => ({ id: plan.id, name: bookName(plan.id), pages: plan.slots.map((s) => pages.get(s.id)!) })),
   });
   return set;
