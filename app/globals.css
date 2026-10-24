@@ -314,6 +314,9 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .wd-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: #5b625d; }
 .wd-nav button { background: #222B26; color: #FBF8F3; border: 0; border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
 .wd-nav button:disabled { opacity: 0.35; cursor: default; }
+.m-art:has(.m-ill) { grid-template-rows: minmax(0, 1fr) auto; gap: 2px; padding: 8px 6px 4px; }
+.m-ill { width: 100%; height: 100%; min-height: 0; }
+.m-thumb:not(img) { display: inline-grid; width: 28px; height: 28px; place-items: center; }
 .m-credit { color: #8a8f88; font: 400 11px var(--mono); }
 .m-gauge { display: flex; gap: 12px; align-items: baseline; }
 .m-gauge b { font: 600 28px var(--mono); }

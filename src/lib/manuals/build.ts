@@ -13,7 +13,7 @@ import { findPartImages } from "../images/agents";
 import type { PartImage } from "../images/store";
 import { labelPins } from "../kit/wiring";
 import { boardPinOf } from "../pi-header";
-import { BOOKS, ManualSet, type BookIdT, type ManualPageT, type ManualSetT } from "../manual-format";
+import { BOOKS, IconName, ManualSet, type BookIdT, type IconNameT, type ManualPageT, type ManualSetT } from "../manual-format";
 
 type Say = (text: string) => void;
 type End = { dev: string; port: string; pin?: number };
@@ -33,6 +33,9 @@ export const shortName = (p: Part) => {
   }
   return name.length > 40 ? clip(name.slice(0, 40).replace(/\s+\S*$/, ""), 40) : clip(name, 40); // cut at a word, not mid-word
 };
+
+/** Default drawing for a step that shows no part. */
+const SLOT_ICON: Record<string, IconNameT> = { "2.1": "sdcard", "8.1": "power", "9.1": "terminal", "S.1": "wire", "S.2": "wire", "S.3": "multimeter", "S.4": "header" };
 
 const SKILLS: Slot[] = [
   { id: "S.1", kind: "skill", title: "Strip a wire", hint: "Remove about 6 mm of insulation without cutting the strands.", panels: 3 },
@@ -120,7 +123,7 @@ const WriterOut = z.object({
     blurb: z.string().optional(),
     warning: z.string().optional(),
     footer: z.string().optional(),
-    panels: z.array(z.object({ title: z.string(), caption: z.string().optional(), partId: z.string().optional() })).optional(),
+    panels: z.array(z.object({ title: z.string(), caption: z.string().optional(), partId: z.string().optional(), icon: z.string().optional() })).optional(),
     rows: z.array(z.object({ symptom: z.string(), advice: z.string(), see: z.array(z.string()).optional() })).optional(),
     see: z.array(z.string()).optional(),
   })),
@@ -148,7 +151,7 @@ function writerSchema(slotIds: string[], partIds: string[], allSlots: string[]) 
             blurb: { type: "string", description: "One short sentence." },
             warning: { type: "string", description: "Only if a real hazard exists. Max 70 characters." },
             footer: { type: "string" },
-            panels: { type: "array", items: { type: "object", properties: { title: { type: "string" }, caption: { type: "string" }, partId: part }, required: ["title"] } },
+            panels: { type: "array", items: { type: "object", properties: { title: { type: "string" }, caption: { type: "string" }, partId: part, icon: { type: "string", enum: IconName.options, description: "Drawing for steps that show no part." } }, required: ["title"] } },
             rows: { type: "array", items: { type: "object", properties: { symptom: { type: "string" }, advice: { type: "string" }, see: see }, required: ["symptom", "advice"] } },
             see,
           },
@@ -207,10 +210,13 @@ export async function generateManuals(design: Design, derived: Derived, catalog:
   const titleOf = new Map(plans.flatMap((p) => p.slots.map((s) => [s.id, clip(written[plans.indexOf(p)]?.pages.find((w) => w.slot === s.id)?.title, 40) || s.title] as const)));
   const seeRefs = (labels: string[] | undefined, self: string) =>
     (labels ?? []).filter((l) => l !== self && allSlots.includes(l)).slice(0, 3).map((l) => ({ book: l.split(".")[0] as BookIdT, page: Number(l.split(".")[1]), label: clip(titleOf.get(l), 60) }));
+  // A verified photo when there is one, otherwise a drawing of the part, so no slot is left empty.
   const art = (partId?: string) => {
-    const img = partId && images[partId];
-    return img ? { kind: "photo" as const, src: img.src, credit: img.credit } : undefined;
+    if (!partId) return undefined;
+    const img = images[partId];
+    return img ? { kind: "photo" as const, src: img.src, credit: img.credit } : { kind: "part" as const, partId };
   };
+  const icon = (name?: string, fallback: IconNameT = "tools") => ({ kind: "icon" as const, name: IconName.safeParse(name).data ?? fallback });
   const box = (partIds: string[]) => partIds.slice(0, 6).map((id) => ({ qty: Math.max(1, qty(id)), label: shortName(catalog.find((p) => p.id === id)!), art: art(id) }));
   const allWires = plans.flatMap((p) => p.slots.flatMap((s) => s.wires ?? []));
 
@@ -219,8 +225,8 @@ export async function generateManuals(design: Design, derived: Derived, catalog:
     plan.slots.forEach((slot, si) => {
       const w = written[pi]?.pages.find((x) => x.slot === slot.id);
       const base = { book: plan.id, page: si + 1, title: titleOf.get(slot.id)!, blurb: clip(w?.blurb, 160) || clip(slot.hint, 160), warning: clip(w?.warning, 80) || undefined, parts: slot.kind === "steps" || slot.kind === "wiring" ? box(plan.partIds) : [], see: seeRefs(w?.see, slot.id) };
-      const panels = (w?.panels ?? []).slice(0, slot.panels || 3).map((p) => ({ title: clip(p.title, 40), caption: clip(p.caption, 200) || undefined, art: art(p.partId && plan.partIds.includes(p.partId) ? p.partId : undefined) }));
-      const fallbackPanels = [{ title: slot.title, caption: clip(slot.hint, 200), art: art(plan.partIds[0]) }];
+      const panels = (w?.panels ?? []).slice(0, slot.panels || 3).map((p) => ({ title: clip(p.title, 40), caption: clip(p.caption, 200) || undefined, art: p.partId && plan.partIds.includes(p.partId) ? art(p.partId) : icon(p.icon, SLOT_ICON[slot.id]) }));
+      const fallbackPanels = [{ title: slot.title, caption: clip(slot.hint, 200), art: art(plan.partIds[0]) ?? icon(undefined, SLOT_ICON[slot.id]) }];
       let page: ManualPageT;
       if (slot.kind === "steps") page = { ...base, kind: "steps", panels: panels.length ? panels : fallbackPanels, footer: clip(w?.footer, 120) || undefined };
       else if (slot.kind === "skill") page = { ...base, kind: "skill", panels: panels.length ? panels : fallbackPanels };

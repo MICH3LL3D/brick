@@ -13,7 +13,7 @@ import { imageExt, readImages, saveImage, type PartImage } from "./store";
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36";
 const MAX_BYTES = 3_000_000;
-const MAX_CANDIDATES = 4;
+const MAX_CANDIDATES = 5;
 
 /** https to a public host only: model-written and page-written URLs must not reach local services. */
 export function isPublicHttps(raw: string): boolean {
@@ -57,8 +57,8 @@ async function readCapped(res: Response, max: number): Promise<Buffer | null> {
 
 /* ---------- 1. Page agent ---------- */
 
-export async function pageCandidates(part: Part): Promise<string[]> {
-  const res = part.url ? await safeFetch(part.url) : null;
+export async function pageImages(pageUrl: string): Promise<string[]> {
+  const res = pageUrl ? await safeFetch(pageUrl) : null;
   if (!res) return [];
   const html = (await readCapped(res, 2_000_000))?.toString("utf8") ?? "";
   const found = [
@@ -66,19 +66,21 @@ export async function pageCandidates(part: Part): Promise<string[]> {
     ...html.matchAll(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/gi),
     ...html.matchAll(/"image"\s*:\s*"([^"]+)"/g),
   ].map((m) => m[1].replace(/&amp;/g, "&"));
-  return [...new Set(found.map((u) => { try { return new URL(u, part.url).href; } catch { return ""; } }).filter(Boolean))];
+  return [...new Set(found.map((u) => { try { return new URL(u, pageUrl).href; } catch { return ""; } }).filter(Boolean))];
 }
 
 /* ---------- 2. Search agent ---------- */
 
-export async function searchCandidates(part: Part): Promise<string[]> {
+/** Image URLs and product-page URLs for the part. Page URLs are read for their images too. */
+export async function searchCandidates(part: Part): Promise<{ images: string[]; pages: string[] }> {
   const res = await getGemini().models.generateContent({
     model: MODELS.CATALOG_SCRAPE,
-    contents: `Use Google Search to find direct https image URLs (jpg, png or webp) of this exact product, preferably from the vendor's own product page.\nProduct: ${part.name}\nVendor: ${part.vendor}\nProduct page: ${part.url || "(unknown)"}\nReply with only a JSON array of up to 4 URL strings. Never invent a URL; return [] if you cannot find one.`,
+    contents: `Use Google Search to find photos of this exact product.\nProduct: ${part.name}\nVendor: ${part.vendor}\nProduct page: ${part.url || "(unknown)"}\nReply with only JSON: {"images": up to 5 direct https image URLs (jpg, png or webp), "pages": up to 3 https product pages (vendor or manufacturer) that show the product}. Never invent a URL; use empty lists if you find none.`,
     config: { tools: [{ googleSearch: {} }], temperature: 0.1, abortSignal: geminiTimeout(60_000) },
   });
-  const raw = z.array(z.string()).safeParse((() => { try { return parseJsonText(res.text); } catch { return null; } })());
-  return raw.success ? raw.data : [];
+  const raw = (() => { try { return parseJsonText(res.text); } catch { return null; } })();
+  const parsed = z.object({ images: z.array(z.string()).default([]), pages: z.array(z.string()).default([]) }).safeParse(Array.isArray(raw) ? { images: raw } : raw);
+  return parsed.success ? parsed.data : { images: [], pages: [] };
 }
 
 /* ---------- 3. Verifier agent ---------- */
@@ -124,9 +126,12 @@ export async function findPartImage(part: Part, say: (t: string) => void = () =>
   if (have) return have;
   if ((missedUntil.get(part.id) ?? 0) > Date.now()) return null;
   const tried = new Set<string>();
+  let search: ReturnType<typeof searchCandidates> | undefined; // one search call serves both web sources
+  const searched = () => (search ??= searchCandidates(part));
   const sources: [string, () => Promise<string[]>][] = [
-    ["vendor page", () => pageCandidates(part)],
-    ["web search", () => searchCandidates(part)],
+    ["vendor page", () => pageImages(part.url)],
+    ["web search", async () => (await searched()).images],
+    ["web search pages", async () => (await Promise.all((await searched()).pages.slice(0, 3).map((u) => pageImages(u).catch(() => [])))).flat()],
   ];
   for (const [label, get] of sources) {
     say(`Photo agent (${label}): looking for ${part.name}…`);
