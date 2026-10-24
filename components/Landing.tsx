@@ -26,7 +26,7 @@ export function Landing() {
       </header>
       <main>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <Owl size={88} blink />
+          <Owl size={64} blink />
           <h1>Build the robot you imagined.</h1>
           <p className="sub">No engineering experience needed.</p>
         </div>
@@ -37,7 +37,7 @@ export function Landing() {
           </div>
           <div className="brow">
             <label htmlFor="budget">Budget</label>
-            <BudgetSlider id="budget" value={budget} onChange={setBudget} width={240} />
+            <BudgetSlider id="budget" value={budget} onChange={setBudget} width={200} />
             <output htmlFor="budget">${budget}</output>
           </div>
         </form>
