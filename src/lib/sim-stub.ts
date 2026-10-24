@@ -53,7 +53,7 @@ export function simulate(design: Design, task: Task, room: Room, catalog: Part[]
   if (batteryUsedPct >= 100) events.push({ t: round1(t), targetId: "home", op: "return_home", ok: false, note: "battery ran out" });
 
   return {
-    success: events.length > 0 && events.every((e) => e.ok),
+    success: events.every((e) => e.ok), // nothing to visit (room-free design) is not a failure
     checks: derived.checks,
     path,
     events,

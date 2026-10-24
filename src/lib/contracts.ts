@@ -85,9 +85,27 @@ export const Room = z.object({
   targets: z.array(Target),                             // candidates; a Task picks a subset
 });
 
+/** What the task physically needs, estimated by Gemini from the prompt alone (no room). All 0/false = not needed. */
+export const Requirements = z.object({
+  feasible: z.boolean(),                                // can a small wheeled robot do this at all?
+  notes: z.string(),                                    // honest limitations, plain English
+  actions: z.array(z.string()),                         // short verbs: "pick up", "carry", "water", "photograph"...
+  reachHeightMm: z.number().min(0),                     // highest point the tool must reach, above the floor
+  reachOutMm: z.number().min(0),                        // how far past the robot's front the tool must reach
+  gripWidthMm: z.number().min(0),                       // object width the gripper must open to
+  liftMassG: z.number().min(0),                         // heaviest object the arm must lift
+  carryMassG: z.number().min(0),                        // extra load riding on the deck
+  liquidMl: z.number().min(0),                          // liquid dispensed per mission
+  needsCamera: z.boolean(),
+  needsDistanceSensor: z.boolean(),
+  maxWidthMm: z.number().min(0),                        // robot must be no wider than this (0 = no limit)
+  runtimeMin: z.number().min(0),                        // minutes of runtime per mission
+});
+
 export const Task = z.object({
   prompt: z.string(),                                   // the user's words
-  targetIds: z.array(z.string()),                       // chosen by Gemini from room.targets
+  targetIds: z.array(z.string()),                       // chosen by Gemini from room.targets (empty for room-free designs)
+  requirements: Requirements.optional(),                // room-free designs are checked against these instead of targets
 });
 
 /* ---------- Checks + simulation ---------- */
