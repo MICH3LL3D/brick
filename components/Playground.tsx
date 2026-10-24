@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Part } from "@/lib/contracts";
 import { downloadKit, exportCsv, generate, getCatalog, getRoom, rebudget } from "@/lib/api";
+import { sumUsd } from "@/lib/money";
 import { STUB_CATALOG, STUB_ROOM, type Result } from "@/lib/stub";
 import { SUPPLIES } from "@/lib/supplies";
 import { CartDrawer } from "./CartDrawer";
@@ -49,7 +50,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const current = robots.find((r) => r.id === currentId) ?? null;
   const partsOf = useCallback((ids: string[]) => ids.map((i) => catalog.find((p) => p.id === i) ?? SUPPLIES.find((p) => p.id === i)).filter((p): p is Part => !!p), [catalog]);
   const parts = useMemo(() => (current ? partsOf(current.design.partIds) : []), [current, partsOf]);
-  const totalOf = (ids: string[]) => partsOf(ids).reduce((s, p) => s + p.priceUsd, 0);
+  const totalOf = (ids: string[]) => sumUsd(partsOf(ids).map((p) => p.priceUsd));
 
   const patch = (id: string, f: (r: Robot) => Robot) => setRobots((rs) => rs.map((r) => (r.id === id ? f(r) : r)));
 

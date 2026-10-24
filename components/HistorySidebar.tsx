@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usd } from "@/lib/money";
 
 export type HistoryItem = { id: string; name: string; totalUsd: number; parts: number };
 
@@ -30,7 +31,7 @@ export function HistorySidebar(p: { items: HistoryItem[]; currentId: string | nu
               onKeyDown={(e) => { if (e.key === "Enter") done(true); if (e.key === "Escape") done(false); }}
             />
           ) : r.name}
-          <small><b>${r.totalUsd}</b> · {r.parts} parts</small>
+          <small><b>{usd(r.totalUsd)}</b> · {r.parts} parts</small>
         </div>
       ))}
     </nav>
