@@ -27,6 +27,17 @@ export function LoadingView({ prompt }: { prompt: string }) {
   );
 }
 
+export function ErrorView({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="center" role="alert">
+      <Owl size={120} />
+      <h2>Couldn’t design that robot</h2>
+      <p className="muted">{message}</p>
+      <button className="btn-gold" onClick={onRetry} style={{ marginTop: 16 }}>Try again</button>
+    </div>
+  );
+}
+
 export function EmptyView() {
   return (
     <div className="center">

@@ -13,8 +13,22 @@ async function post<T>(url: string, body: unknown, fallback: () => T): Promise<T
   }
 }
 
-export const generate = (prompt: string, budgetUsd: number) =>
-  post<Result & { task?: unknown }>("/api/generate", { prompt, budgetUsd }, () => stubResult(budgetUsd));
+export type GenerateOutcome = { ok: true; result: Result & { task?: unknown } } | { ok: false; error: string };
+
+/** No stub fallback: if the backend did not design a robot, say why instead of showing a fake one. */
+export async function generate(prompt: string, budgetUsd: number): Promise<GenerateOutcome> {
+  let res: Response;
+  try {
+    res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt, budgetUsd }) });
+  } catch {
+    return { ok: false, error: "Couldn’t reach the design service. Check that the app server is running." };
+  }
+  const body = await res.json().catch(() => null);
+  if (!res.ok || !body?.design) {
+    return { ok: false, error: body?.error ?? `The design service failed (HTTP ${res.status}).` };
+  }
+  return { ok: true, result: body };
+}
 
 export const rebudget = (design: Design, budgetUsd: number) =>
   post<Result>("/api/rebudget", { design, budgetUsd }, () => stubResult(budgetUsd));

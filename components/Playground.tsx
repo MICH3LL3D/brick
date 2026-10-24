@@ -9,7 +9,7 @@ import { SUPPLIES } from "@/lib/supplies";
 import { CartDrawer } from "./CartDrawer";
 import { HistorySidebar } from "./HistorySidebar";
 import { ALL_LAYERS, LayersPanel, type Layers } from "./LayersPanel";
-import { EmptyView, LoadingView } from "./LoadingView";
+import { EmptyView, ErrorView, LoadingView } from "./LoadingView";
 import { PartCard } from "./PartCard";
 import { PromptBar } from "./PromptBar";
 import { RobotPreview, type Offsets } from "./RobotPreview";
@@ -42,6 +42,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const [limitsOpen, setLimitsOpen] = useState(false);
   const [undo, setUndo] = useState<Undo | null>(null);
   const [note, setNote] = useState("");
+  const [genError, setGenError] = useState<{ message: string; prompt: string; budget: number } | null>(null);
   const [kitBusy, setKitBusy] = useState(false);
   const undoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const budgetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -58,7 +59,14 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
     setBusy(true);
     setSelectedId(null);
     setCurrentId(null);
-    const res = await generate(text, b);
+    setGenError(null);
+    const out = await generate(text, b);
+    if (!out.ok) {
+      setGenError({ message: out.error, prompt: text, budget: b });
+      setBusy(false);
+      return;
+    }
+    const res = out.result;
     const id = crypto.randomUUID();
     setRobots((rs) => [...rs, { ...res, id, name: titleOf(text), prompt: text, offsets: {}, cart: [...res.design.partIds, ...SUPPLIES.map((x) => x.id)] }]);
     setCurrentId(id);
@@ -161,7 +169,8 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
         )}
         <main className="stage">
           {busy && <LoadingView prompt={prompt} />}
-          {!busy && !current && <EmptyView />}
+          {!busy && !current && genError && <ErrorView message={genError.message} onRetry={() => run(genError.prompt, genError.budget)} />}
+          {!busy && !current && !genError && <EmptyView />}
           {!busy && current && tab === "robot" && (
             <>
               <div className="preview" style={{ right: checksOpen ? 396 : 0 }}>
