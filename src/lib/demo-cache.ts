@@ -29,8 +29,8 @@ export function slug(prompt: string): string {
 }
 
 /** Cached result for a demo prompt, re-checked at `budgetUsd` (the request's budget) if given. */
-export function readCache(prompt: string, room: Room, catalog: Part[], budgetUsd?: number): GenerateResult | null {
-  const entry = readEntry(prompt);
+export function readCache(prompt: string, room: Room, catalog: Part[], budgetUsd?: number, dir = CACHE_DIR): GenerateResult | null {
+  const entry = readEntry(prompt, dir);
   if (!entry) return null;
   const { task, attempts, repairNotes, origin } = entry;
   const design = budgetUsd === undefined ? entry.design : { ...entry.design, budgetUsd };
@@ -40,8 +40,9 @@ export function readCache(prompt: string, room: Room, catalog: Part[], budgetUsd
   return { task, design, derived, sim, ok, attempts, repairNotes, source: "cache", cacheOrigin: origin };
 }
 
-export function readEntry(prompt: string): CacheEntry | null {
-  const file = join(CACHE_DIR, `${slug(prompt)}.json`);
+/** `dir` defaults to data/cache; tests pass a temp dir. */
+export function readEntry(prompt: string, dir = CACHE_DIR): CacheEntry | null {
+  const file = join(dir, `${slug(prompt)}.json`);
   if (!existsSync(file)) return null;
   try {
     const parsed = CacheEntry.safeParse(JSON.parse(readFileSync(file, "utf8")));
