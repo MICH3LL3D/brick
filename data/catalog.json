@@ -1,0 +1,955 @@
+[
+  {
+    "id": "chassis-2wd-s",
+    "category": "chassis",
+    "name": "Mini Robot Rover Chassis Kit - 2WD with DC Motors",
+    "priceUsd": 24.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/2939",
+    "verified": false,
+    "dims": {
+      "l": 150,
+      "w": 130,
+      "h": 65
+    },
+    "massG": 250,
+    "caps": {
+      "wheels": 2,
+      "maxPayloadG": 600,
+      "speedMps": 0.35,
+      "wheelDiameterMm": 65,
+      "drawW": 4,
+      "pins": 0,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Two small brushed DC motors rated about 3-6V. Drive them from a motor driver, never straight from Pi GPIO. Give the motors their own battery; share only ground with the Pi."
+  },
+  {
+    "id": "chassis-2wd-m",
+    "category": "chassis",
+    "name": "Romi Chassis Kit - Black",
+    "priceUsd": 39.95,
+    "vendor": "Pololu",
+    "url": "https://www.pololu.com/product/3500",
+    "verified": false,
+    "dims": {
+      "l": 165,
+      "w": 165,
+      "h": 70
+    },
+    "massG": 300,
+    "caps": {
+      "wheels": 2,
+      "maxPayloadG": 1000,
+      "speedMps": 0.5,
+      "wheelDiameterMm": 70,
+      "drawW": 5,
+      "pins": 0,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Round 165 mm differential-drive base with a built-in 6x AA battery holder. Mini plastic gearmotors included. Use a dual H-bridge driver; motors need their own supply."
+  },
+  {
+    "id": "chassis-4wd-m",
+    "category": "chassis",
+    "name": "Pirate - 4WD Mobile Platform",
+    "priceUsd": 39.9,
+    "vendor": "DFRobot",
+    "url": "https://www.dfrobot.com/product-97.html",
+    "verified": false,
+    "dims": {
+      "l": 210,
+      "w": 180,
+      "h": 105
+    },
+    "massG": 610,
+    "caps": {
+      "wheels": 4,
+      "maxPayloadG": 3000,
+      "speedMps": 0.6,
+      "wheelDiameterMm": 65,
+      "drawW": 8,
+      "pins": 0,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Four DC gearmotors. Wire each side's two motors in parallel so a dual driver (2 channels) can steer it. Four motors stalling can pull several amps: size the driver and motor battery for that. Payload is an estimate; vendor page does not state it clearly."
+  },
+  {
+    "id": "chassis-4wd-l",
+    "category": "chassis",
+    "name": "Hiwonder Large Metal 4WD Vehicle Chassis (12V encoder gearmotors)",
+    "priceUsd": 199.99,
+    "vendor": "RobotShop",
+    "url": "https://www.robotshop.com/products/hiwonder-hiwonder-large-metal-4wd-vehicle-chassis-arduino-raspberry-pi-ros-robot-with-12v-encoder-geared-motor",
+    "verified": false,
+    "dims": {
+      "l": 300,
+      "w": 245,
+      "h": 100
+    },
+    "massG": 1900,
+    "caps": {
+      "wheels": 4,
+      "maxPayloadG": 5000,
+      "speedMps": 0.5,
+      "wheelDiameterMm": 97,
+      "drawW": 15,
+      "pins": 0,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Aluminium frame with mecanum wheels and 12V motors. 12V motors draw more current than small TT motors: use a high-power driver and a 12V-capable motor battery. Encoder outputs are 5V on some versions; level-shift to 3.3V before the Pi."
+  },
+  {
+    "id": "pi4b-4gb",
+    "category": "controller",
+    "name": "Raspberry Pi 4 Model B - 4 GB RAM",
+    "priceUsd": 120,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/4296",
+    "verified": false,
+    "dims": {
+      "l": 85,
+      "w": 56,
+      "h": 17
+    },
+    "massG": 46,
+    "caps": {
+      "outputV": 3.3,
+      "drawW": 4,
+      "pins": 26,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "GPIO is 3.3V logic and NOT 5V tolerant. No analog inputs: use an ADC such as the ADS1115. Needs a steady 5V 3A supply on USB-C or the 5V pins. 26 usable GPIO (BCM 2-27); BCM 2/3 are I2C."
+  },
+  {
+    "id": "pi5-4gb",
+    "category": "controller",
+    "name": "Raspberry Pi 5 - 4 GB RAM",
+    "priceUsd": 130,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/5812",
+    "verified": false,
+    "dims": {
+      "l": 85,
+      "w": 56,
+      "h": 17
+    },
+    "massG": 50,
+    "caps": {
+      "outputV": 3.3,
+      "drawW": 5,
+      "pins": 26,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "GPIO is 3.3V logic and NOT 5V tolerant. No analog inputs. Wants 5V 5A for full USB current; 5V 3A works with reduced USB power. Camera uses the smaller 22-pin CSI connector (needs the right ribbon cable). gpiozero works; RPi.GPIO does not."
+  },
+  {
+    "id": "md-tb6612",
+    "category": "motor_driver",
+    "name": "Adafruit TB6612 1.2A DC/Stepper Motor Driver Breakout",
+    "priceUsd": 6.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/2448",
+    "verified": false,
+    "dims": {
+      "l": 27,
+      "w": 20,
+      "h": 4
+    },
+    "massG": 2,
+    "caps": {
+      "maxCurrentA": 1.2,
+      "drawW": 0.1,
+      "pins": 7,
+      "interface": "gpio"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "2 channels, 1.2A each (3A peak). Motor supply VM 4.5-13.5V; logic VCC from the Pi 3.3V pin. Pins: AIN1, AIN2, PWMA, BIN1, BIN2, PWMB, STBY."
+  },
+  {
+    "id": "md-drv8833",
+    "category": "motor_driver",
+    "name": "DRV8833 Dual Motor Driver Carrier",
+    "priceUsd": 10.95,
+    "vendor": "Pololu",
+    "url": "https://www.pololu.com/product/2130",
+    "verified": false,
+    "dims": {
+      "l": 18,
+      "w": 13,
+      "h": 3
+    },
+    "massG": 1,
+    "caps": {
+      "maxCurrentA": 1.2,
+      "drawW": 0.1,
+      "pins": 4,
+      "interface": "gpio"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "2 channels, 1.2A continuous each. Motor supply 2.7-10.8V, so not for 12V motors. Pins: AIN1, AIN2, BIN1, BIN2 (PWM on the IN pins)."
+  },
+  {
+    "id": "md-motor-hat",
+    "category": "motor_driver",
+    "name": "Adafruit DC & Stepper Motor HAT for Raspberry Pi - Mini Kit",
+    "priceUsd": 22.5,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/2348",
+    "verified": false,
+    "dims": {
+      "l": 65,
+      "w": 56,
+      "h": 15
+    },
+    "massG": 20,
+    "caps": {
+      "maxCurrentA": 1.2,
+      "drawW": 0.2,
+      "pins": 0,
+      "interface": "i2c"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "4 DC motor channels over I2C (two TB6612 chips), 1.2A each. Uses only SDA/SCL. Motor power 5-12V on its own terminal block, separate from the Pi."
+  },
+  {
+    "id": "md-g2-24v14",
+    "category": "motor_driver",
+    "name": "Dual G2 High-Power Motor Driver 24v14 for Raspberry Pi",
+    "priceUsd": 74.95,
+    "vendor": "Pololu",
+    "url": "https://www.pololu.com/product/3752",
+    "verified": false,
+    "dims": {
+      "l": 65,
+      "w": 56,
+      "h": 12
+    },
+    "massG": 25,
+    "caps": {
+      "maxCurrentA": 14,
+      "drawW": 0.3,
+      "pins": 6,
+      "interface": "gpio"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "2 channels, 14A continuous each, 6.5-30V motor supply. Use for 12V or heavy chassis. Uses fixed GPIO pins for PWM, direction, sleep and fault."
+  },
+  {
+    "id": "servo-pca9685",
+    "category": "misc",
+    "name": "Adafruit 16-Channel 12-bit PWM/Servo Driver - I2C [PCA9685]",
+    "priceUsd": 14.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/815",
+    "verified": false,
+    "dims": {
+      "l": 62,
+      "w": 25,
+      "h": 3
+    },
+    "massG": 5,
+    "caps": {
+      "drawW": 0.1,
+      "pins": 0,
+      "interface": "i2c"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Drives up to 16 servos over I2C. Servos need their own 5-6V supply on the V+ terminal; never power servos from the Pi 5V rail. Logic VCC 3.3V from the Pi."
+  },
+  {
+    "id": "adc-ads1115",
+    "category": "misc",
+    "name": "ADS1115 16-Bit ADC - 4 Channel",
+    "priceUsd": 14.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/1085",
+    "verified": false,
+    "dims": {
+      "l": 28,
+      "w": 17,
+      "h": 3
+    },
+    "massG": 2,
+    "caps": {
+      "drawW": 0.01,
+      "pins": 0,
+      "interface": "i2c"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Adds analog inputs over I2C (the Pi has none). Power from 3.3V so its I2C lines stay at 3.3V."
+  },
+  {
+    "id": "arm-mearm",
+    "category": "arm",
+    "name": "MeArm Pocket Sized Robot Arm Kit (4 hobby servos)",
+    "priceUsd": 55,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/2012",
+    "verified": false,
+    "dims": {
+      "l": 150,
+      "w": 100,
+      "h": 200
+    },
+    "massG": 250,
+    "caps": {
+      "reachMm": {
+        "min": 150,
+        "max": 150
+      },
+      "liftMaxMm": 200,
+      "armPayloadG": 50,
+      "drawW": 2,
+      "pins": 0,
+      "interface": "pwm"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Fixed servo arm. 4 hobby servos: drive them from a PCA9685 board with a separate 5-6V servo supply. Acrylic, so keep loads light."
+  },
+  {
+    "id": "arm-waveshare-4dof",
+    "category": "arm",
+    "name": "Waveshare 4-DOF Metal Robot Arm Kit for Raspberry Pi",
+    "priceUsd": 54.04,
+    "vendor": "RobotShop",
+    "url": "https://www.robotshop.com/products/waveshare-4-dof-metal-robot-arm-kit-for-raspberry-pi-bluetooth-wifi",
+    "verified": false,
+    "dims": {
+      "l": 250,
+      "w": 120,
+      "h": 300
+    },
+    "massG": 600,
+    "caps": {
+      "reachMm": {
+        "min": 250,
+        "max": 250
+      },
+      "liftMaxMm": 380,
+      "armPayloadG": 200,
+      "drawW": 4,
+      "pins": 0,
+      "interface": "pwm"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Fixed servo arm with 4 metal-gear servos. Reach and payload are estimates: vendor page does not list them. Servos need a separate supply (the included HAT has a 5V 3A regulator fed from VIN)."
+  },
+  {
+    "id": "arm-lact10p",
+    "category": "arm",
+    "name": "Glideforce LACT10P-12V-20 Linear Actuator with Feedback, 10\" stroke (vertical lift mast)",
+    "priceUsd": 199.18,
+    "vendor": "Pololu",
+    "url": "https://www.pololu.com/product/2311",
+    "verified": false,
+    "dims": {
+      "l": 60,
+      "w": 45,
+      "h": 356
+    },
+    "massG": 1100,
+    "caps": {
+      "reachMm": {
+        "min": 60,
+        "max": 160
+      },
+      "liftMaxMm": 606,
+      "armPayloadG": 2000,
+      "drawW": 6,
+      "pins": 0,
+      "interface": "gpio"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Extendable arm: mount vertically as a lift mast, about 356 mm retracted plus 250 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: read it through an ADS1115, not a Pi pin. Reach range assumes a small servo wrist on top (estimate)."
+  },
+  {
+    "id": "arm-lact12p",
+    "category": "arm",
+    "name": "Glideforce LACT12P-12V-20 Linear Actuator with Feedback, 12\" stroke (vertical lift mast)",
+    "priceUsd": 200.62,
+    "vendor": "Pololu",
+    "url": "https://www.pololu.com/product/2313",
+    "verified": false,
+    "dims": {
+      "l": 60,
+      "w": 45,
+      "h": 394
+    },
+    "massG": 1200,
+    "caps": {
+      "reachMm": {
+        "min": 60,
+        "max": 180
+      },
+      "liftMaxMm": 694,
+      "armPayloadG": 2000,
+      "drawW": 6,
+      "pins": 0,
+      "interface": "gpio"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Extendable arm: mount vertically as a lift mast, about 394 mm retracted plus 300 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: read it through an ADS1115. Reach range assumes a small servo wrist on top (estimate)."
+  },
+  {
+    "id": "arm-lact4p",
+    "category": "arm",
+    "name": "Generic Linear Actuator with Feedback, 4\" stroke, 12V (vertical lift)",
+    "priceUsd": 86.95,
+    "vendor": "Pololu",
+    "url": "https://www.pololu.com/product/2333",
+    "verified": false,
+    "dims": {
+      "l": 50,
+      "w": 35,
+      "h": 210
+    },
+    "massG": 600,
+    "caps": {
+      "reachMm": {
+        "min": 60,
+        "max": 140
+      },
+      "liftMaxMm": 312,
+      "armPayloadG": 1500,
+      "drawW": 5,
+      "pins": 0,
+      "interface": "gpio"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Extendable arm: about 210 mm retracted plus 100 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Analog feedback via ADS1115."
+  },
+  {
+    "id": "tool-gripper",
+    "category": "tool",
+    "name": "ServoCity Servo-Driven Gripper Kit (Servo Included)",
+    "priceUsd": 29.99,
+    "vendor": "RobotShop",
+    "url": "https://www.robotshop.com/products/servocity-servo-driven-gripper-kit-servo-included",
+    "verified": false,
+    "dims": {
+      "l": 110,
+      "w": 80,
+      "h": 40
+    },
+    "massG": 120,
+    "caps": {
+      "gripMaxMm": 75,
+      "drawW": 1.5,
+      "pins": 0,
+      "interface": "pwm"
+    },
+    "mounts": [
+      "tool_mount"
+    ],
+    "notes": "One hobby servo: drive from the PCA9685 with a separate 5-6V supply. Jaw opening is an estimate; vendor page does not list it."
+  },
+  {
+    "id": "tool-pump-peristaltic",
+    "category": "tool",
+    "name": "Peristaltic Liquid Pump with Silicone Tubing - 5V to 6V DC",
+    "priceUsd": 24.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/3910",
+    "verified": false,
+    "dims": {
+      "l": 70,
+      "w": 40,
+      "h": 50
+    },
+    "massG": 100,
+    "caps": {
+      "pumpMlPerS": 1.5,
+      "drawW": 2,
+      "pins": 0,
+      "interface": "gpio"
+    },
+    "mounts": [
+      "tool_mount",
+      "deck"
+    ],
+    "notes": "DC motor pump: switch it with a motor driver channel or a logic-level MOSFET plus flyback diode, never directly from a GPIO pin. Self-priming, so the tank can sit below the nozzle."
+  },
+  {
+    "id": "tool-pump-submersible",
+    "category": "tool",
+    "name": "Submersible 3V DC Water Pump with 1 Meter Wire",
+    "priceUsd": 2.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/4546",
+    "verified": false,
+    "dims": {
+      "l": 45,
+      "w": 30,
+      "h": 30
+    },
+    "massG": 30,
+    "caps": {
+      "pumpMlPerS": 15,
+      "drawW": 0.6,
+      "pins": 0,
+      "interface": "gpio"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Sits inside the tank. Runs at 2.5-6V. Switch with a motor driver channel or MOSFET plus diode. Not self-priming: keep it under water."
+  },
+  {
+    "id": "tool-pump-gravity",
+    "category": "tool",
+    "name": "Gravity: Digital Peristaltic Pump (PPM Servo Control)",
+    "priceUsd": 24,
+    "vendor": "DFRobot",
+    "url": "https://www.dfrobot.com/product-1698.html",
+    "verified": false,
+    "dims": {
+      "l": 80,
+      "w": 45,
+      "h": 60
+    },
+    "massG": 150,
+    "caps": {
+      "pumpMlPerS": 1.2,
+      "drawW": 3,
+      "pins": 0,
+      "interface": "pwm"
+    },
+    "mounts": [
+      "tool_mount",
+      "deck"
+    ],
+    "notes": "Controlled like a servo, so it runs from a PCA9685 channel. Needs its own 5V supply rated for its motor current."
+  },
+  {
+    "id": "tool-cam-pantilt",
+    "category": "tool",
+    "name": "Mini Pan-Tilt Kit - Assembled with Micro Servos",
+    "priceUsd": 18.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/1967",
+    "verified": false,
+    "dims": {
+      "l": 40,
+      "w": 40,
+      "h": 60
+    },
+    "massG": 60,
+    "caps": {
+      "drawW": 1,
+      "pins": 0,
+      "interface": "pwm"
+    },
+    "mounts": [
+      "deck",
+      "tool_mount"
+    ],
+    "notes": "Camera mount with two micro servos. Drive the servos from a PCA9685 with a separate 5V supply."
+  },
+  {
+    "id": "tank-500",
+    "category": "misc",
+    "name": "Nalgene 16 oz Wide Mouth Sustain Bottle (about 500 ml water tank)",
+    "priceUsd": 14.99,
+    "vendor": "Nalgene",
+    "url": "https://nalgene.com/product/16oz-wide-mouth-sustain/",
+    "verified": false,
+    "dims": {
+      "l": 75,
+      "w": 75,
+      "h": 150
+    },
+    "massG": 90,
+    "caps": {
+      "tankMl": 500,
+      "pins": 0,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Water tank. Drill the lid for tubing and keep it above the electronics' level only if the pump is self-priming. Full tank adds about 500 g."
+  },
+  {
+    "id": "tank-1000",
+    "category": "misc",
+    "name": "Nalgene 32 oz Wide Mouth Sustain Bottle (about 1000 ml water tank)",
+    "priceUsd": 16.99,
+    "vendor": "Nalgene",
+    "url": "https://nalgene.com/product/32oz-wide-mouth-sustain/",
+    "verified": false,
+    "dims": {
+      "l": 90,
+      "w": 90,
+      "h": 200
+    },
+    "massG": 180,
+    "caps": {
+      "tankMl": 1000,
+      "pins": 0,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Water tank. Full tank adds about 1 kg, which small chassis cannot carry."
+  },
+  {
+    "id": "cam-pi3",
+    "category": "sensor",
+    "name": "Raspberry Pi Camera Module 3 Standard (12MP autofocus)",
+    "priceUsd": 29.25,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/5657",
+    "verified": false,
+    "dims": {
+      "l": 25,
+      "w": 24,
+      "h": 12
+    },
+    "massG": 4,
+    "caps": {
+      "drawW": 1.2,
+      "pins": 0,
+      "interface": "csi"
+    },
+    "mounts": [
+      "deck",
+      "tool_mount"
+    ],
+    "notes": "Plugs into the CSI connector; uses no GPIO. Pi 5 needs the 22-pin mini CSI cable. Use picamera2, not the old picamera library."
+  },
+  {
+    "id": "cam-pi3-wide",
+    "category": "sensor",
+    "name": "Raspberry Pi Camera Module 3 Wide (120 degree)",
+    "priceUsd": 38.5,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/5658",
+    "verified": false,
+    "dims": {
+      "l": 25,
+      "w": 24,
+      "h": 12
+    },
+    "massG": 4,
+    "caps": {
+      "drawW": 1.2,
+      "pins": 0,
+      "interface": "csi"
+    },
+    "mounts": [
+      "deck",
+      "tool_mount"
+    ],
+    "notes": "Wide-angle version for room photos. CSI connector, no GPIO. Pi 5 needs the 22-pin mini CSI cable."
+  },
+  {
+    "id": "us-rcwl1601",
+    "category": "sensor",
+    "name": "Ultrasonic Distance Sensor - 3V or 5V - HC-SR04 compatible [RCWL-1601]",
+    "priceUsd": 3.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/4007",
+    "verified": false,
+    "dims": {
+      "l": 45,
+      "w": 20,
+      "h": 15
+    },
+    "massG": 8,
+    "caps": {
+      "drawW": 0.05,
+      "pins": 2,
+      "interface": "gpio"
+    },
+    "mounts": [
+      "front"
+    ],
+    "notes": "Power it from 3.3V so ECHO is 3.3V and safe for the Pi. Pins: TRIG, ECHO. gpiozero DistanceSensor works."
+  },
+  {
+    "id": "us-hcsr04",
+    "category": "sensor",
+    "name": "Ultrasonic Distance Sensor - 5V (HC-SR04)",
+    "priceUsd": 5.25,
+    "vendor": "SparkFun",
+    "url": "https://www.sparkfun.com/products/15569",
+    "verified": false,
+    "dims": {
+      "l": 45,
+      "w": 20,
+      "h": 15
+    },
+    "massG": 9,
+    "caps": {
+      "drawW": 0.075,
+      "pins": 2,
+      "interface": "gpio"
+    },
+    "mounts": [
+      "front"
+    ],
+    "notes": "5V part: ECHO outputs 5V, which can damage the Pi. Add a voltage divider (for example 1k and 2k) on ECHO. Pins: TRIG, ECHO."
+  },
+  {
+    "id": "dist-pololu-5cm",
+    "category": "sensor",
+    "name": "Pololu Digital Distance Sensor, 5cm",
+    "priceUsd": 19.95,
+    "vendor": "Pololu",
+    "url": "https://www.pololu.com/product/4050",
+    "verified": false,
+    "dims": {
+      "l": 22,
+      "w": 8,
+      "h": 5
+    },
+    "massG": 1,
+    "caps": {
+      "drawW": 0.05,
+      "pins": 1,
+      "interface": "gpio"
+    },
+    "mounts": [
+      "front"
+    ],
+    "notes": "Short-range digital proximity: one output pin goes low when something is within about 5 cm. Works at 2.7-6.5V; power at 3.3V for Pi-safe output."
+  },
+  {
+    "id": "imu-mpu6050",
+    "category": "sensor",
+    "name": "Adafruit MPU-6050 6-DoF Accel and Gyro Sensor",
+    "priceUsd": 12.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/3886",
+    "verified": false,
+    "dims": {
+      "l": 25,
+      "w": 18,
+      "h": 5
+    },
+    "massG": 2,
+    "caps": {
+      "drawW": 0.02,
+      "pins": 0,
+      "interface": "i2c"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "I2C on the shared SDA/SCL bus. Helps the robot hold straight lines and detect tipping."
+  },
+  {
+    "id": "imu-bno055",
+    "category": "sensor",
+    "name": "Adafruit 9-DOF Absolute Orientation IMU Fusion Breakout - BNO055",
+    "priceUsd": 34.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/2472",
+    "verified": false,
+    "dims": {
+      "l": 27,
+      "w": 20,
+      "h": 4
+    },
+    "massG": 3,
+    "caps": {
+      "drawW": 0.04,
+      "pins": 0,
+      "interface": "i2c"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "I2C with on-chip sensor fusion (gives heading directly). Known to use I2C clock stretching: on the Pi, lower the I2C baud rate if reads fail."
+  },
+  {
+    "id": "bat-usb-10000",
+    "category": "power",
+    "name": "USB Battery Pack for Raspberry Pi - 10000mAh - 2 x 5V outputs",
+    "priceUsd": 39.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/1566",
+    "verified": false,
+    "dims": {
+      "l": 100,
+      "w": 60,
+      "h": 22
+    },
+    "massG": 230,
+    "caps": {
+      "batteryWh": 37,
+      "outputV": 5,
+      "maxCurrentA": 2,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Powers the Pi from USB. 2A max on the best port, which is below the Pi 4 recommended 3A and Pi 5 recommended 5A: expect undervoltage warnings under load. Not for motors."
+  },
+  {
+    "id": "bat-aa4",
+    "category": "power",
+    "name": "4 x AA Battery Holder with On/Off Switch",
+    "priceUsd": 2.95,
+    "vendor": "Adafruit",
+    "url": "https://www.adafruit.com/product/830",
+    "verified": false,
+    "dims": {
+      "l": 62,
+      "w": 58,
+      "h": 15
+    },
+    "massG": 110,
+    "caps": {
+      "batteryWh": 9.6,
+      "outputV": 4.8,
+      "maxCurrentA": 2,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Motor supply for small 3-6V gearmotors. Wh assumes 4 x 2000 mAh NiMH cells (not included). Too low for 12V actuators."
+  },
+  {
+    "id": "bat-nimh-900",
+    "category": "power",
+    "name": "Rechargeable NiMH Battery Pack: 7.2 V, 900 mAh, 3x2 AAA Cells",
+    "priceUsd": 19.53,
+    "vendor": "Pololu",
+    "url": "https://www.pololu.com/product/2235",
+    "verified": false,
+    "dims": {
+      "l": 66,
+      "w": 31,
+      "h": 21
+    },
+    "massG": 80,
+    "caps": {
+      "batteryWh": 6.5,
+      "outputV": 7.2,
+      "maxCurrentA": 3,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Small motor and servo supply. Needs a NiMH charger. Run the Pi from a separate 5V regulator, not straight from this pack."
+  },
+  {
+    "id": "bat-nimh-2200",
+    "category": "power",
+    "name": "Rechargeable NiMH Battery Pack: 7.2 V, 2200 mAh, 3x2 AA Cells",
+    "priceUsd": 29.39,
+    "vendor": "Pololu",
+    "url": "https://www.pololu.com/product/2225",
+    "verified": false,
+    "dims": {
+      "l": 85,
+      "w": 30,
+      "h": 30
+    },
+    "massG": 180,
+    "caps": {
+      "batteryWh": 15.8,
+      "outputV": 7.2,
+      "maxCurrentA": 5,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Main battery for medium robots. Feed the Pi through a 5V step-down regulator. 7.2V is too low to run 12V actuators at full speed."
+  },
+  {
+    "id": "reg-5v-3a",
+    "category": "power",
+    "name": "5V, 3.2A Step-Down Voltage Regulator D36V28F5",
+    "priceUsd": 23.95,
+    "vendor": "Pololu",
+    "url": "https://www.pololu.com/product/3782",
+    "verified": false,
+    "dims": {
+      "l": 18,
+      "w": 15,
+      "h": 5
+    },
+    "massG": 2,
+    "caps": {
+      "outputV": 5,
+      "maxCurrentA": 3.2,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Steps a 6-50V battery down to 5V for the Pi's 5V pins. Enough for a Pi 4; marginal for a Pi 5 with USB devices."
+  },
+  {
+    "id": "reg-5v-5a",
+    "category": "power",
+    "name": "5V, 5A Step-Down Voltage Regulator D24V50F5",
+    "priceUsd": 32.95,
+    "vendor": "Pololu",
+    "url": "https://www.pololu.com/product/2851",
+    "verified": false,
+    "dims": {
+      "l": 23,
+      "w": 18,
+      "h": 8
+    },
+    "massG": 4,
+    "caps": {
+      "outputV": 5,
+      "maxCurrentA": 5,
+      "interface": "none"
+    },
+    "mounts": [
+      "deck"
+    ],
+    "notes": "Steps a 6-38V battery down to 5V at up to 5A. Good for a Pi 5, or a Pi plus servos on a shared 5V rail."
+  }
+]
