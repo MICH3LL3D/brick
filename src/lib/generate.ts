@@ -11,15 +11,19 @@ import { MODELS } from "./models";
 import { simulate } from "./sim-stub"; // switch to "./sim" when A's sim.ts lands
 
 export const MAX_REPAIRS = 2;
+/** Stop starting new repair rounds after this long, so a request never hangs for minutes. */
+export const REPAIR_DEADLINE_MS = 60_000;
 
 export type GenerateResult = {
   task: Task;
   design: Design;
   derived: Derived;
   sim: SimResult;
+  ok: boolean;               // false = repairs ran out; the failed checks are in derived.checks
   attempts: number;          // 1 = first try passed or no repair helped; up to 1 + MAX_REPAIRS
   repairNotes: string[];     // failure text sent back to Gemini on each repair, shown to the user
   source: "gemini" | "cache";
+  cacheOrigin?: "gemini" | "hand-built"; // set when source is "cache"
 };
 
 /* ---------- Response schema (ids locked by enum) ---------- */
@@ -134,12 +138,17 @@ export async function generateDesign(prompt: string, budgetUsd: number, room: Ro
   const repairNotes: string[] = [];
   let best: Attempt | null = null;
   let attempts = 0;
+  const started = Date.now();
 
   for (let round = 0; round <= MAX_REPAIRS; round++) {
+    if (round > 0 && Date.now() - started > REPAIR_DEADLINE_MS) {
+      repairNotes.push("Stopped repairing: time limit reached.");
+      break;
+    }
     attempts++;
     const res = await generateWithFallback({ model: MODELS.GENERATE, contents, config });
     const text = res.text ?? "";
-    contents.push({ role: "model", parts: [{ text }] });
+    contents.push({ role: "model", parts: [{ text: text || "{}" }] }); // empty parts are rejected by the API
 
     const parsed = GeminiDesign.safeParse(safeJson(text));
     if (!parsed.success) {
@@ -163,7 +172,7 @@ export async function generateDesign(prompt: string, budgetUsd: number, room: Ro
 
   if (!best) throw new Error("Gemini did not return a usable design after repairs.");
   const sim = simulate(best.design, best.task, room, catalog);
-  return { task: best.task, design: best.design, derived: best.derived, sim, attempts, repairNotes, source: "gemini" };
+  return { task: best.task, design: best.design, derived: best.derived, sim, ok: best.failed === 0, attempts, repairNotes, source: "gemini" };
 }
 
 function toAttempt(g: z.infer<typeof GeminiDesign>, prompt: string, budgetUsd: number, room: Room, catalog: Part[]): Attempt {
@@ -172,11 +181,16 @@ function toAttempt(g: z.infer<typeof GeminiDesign>, prompt: string, budgetUsd: n
   const design = Design.parse({ summary: g.summary, partIds: g.partIds, reasons, routine: g.routine, budgetUsd });
   const validTargets = new Set(room.targets.map((t) => t.id));
   const task: Task = { prompt, targetIds: g.targetIds.filter((id) => validTargets.has(id)) };
-  const derived = deriveAndCheck(design, task, room, catalog);
-  // A missing reason is a soft problem; surface it as a check so the UI shows it.
-  const missing = design.partIds.filter((id) => !reasons[id]);
-  if (missing.length) derived.checks.push({ id: "reasons", ok: false, message: `No reason given for: ${missing.join(", ")}.` });
+  const derived = checkWithReasons(design, task, room, catalog);
   return { task, design, derived, failed: derived.checks.filter((c) => !c.ok).length };
+}
+
+/** deriveAndCheck plus a "reasons" check: every part must say why it was chosen. */
+export function checkWithReasons(design: Design, task: Task, room: Room, catalog: Part[]): Derived {
+  const derived = deriveAndCheck(design, task, room, catalog);
+  const missing = design.partIds.filter((id) => !design.reasons[id]);
+  if (missing.length) derived.checks.push({ id: "reasons", ok: false, message: `No reason given for: ${[...new Set(missing)].join(", ")}.` });
+  return derived;
 }
 
 function safeJson(text: string): unknown {

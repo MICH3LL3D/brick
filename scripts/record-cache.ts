@@ -1,10 +1,10 @@
 // Records data/cache/*.json for the 3 demo prompts.
 //   npx tsx --conditions=react-server --env-file=.env.local scripts/record-cache.ts      real Gemini runs
-//   npx tsx --conditions=react-server scripts/record-cache.ts --hand-built               offline placeholders
+//   npx tsx --conditions=react-server scripts/record-cache.ts --hand-built [--force]     offline placeholders
 // Hand-built entries are marked origin:"hand-built" and should be replaced by real runs before the demo.
 import type { Design } from "../src/lib/contracts";
 import { loadCatalog, loadRoom, type Task } from "../src/lib/data";
-import { readCache, writeCache } from "../src/lib/demo-cache";
+import { readCache, readEntry, writeCache } from "../src/lib/demo-cache";
 import { generateDesign } from "../src/lib/generate";
 
 type Seed = { prompt: string; budgetUsd: number; task: Task; design: Omit<Design, "budgetUsd"> };
@@ -88,11 +88,16 @@ const SEEDS: Seed[] = [
 
 async function main() {
   const handBuilt = process.argv.includes("--hand-built");
+  const force = process.argv.includes("--force");
   const room = loadRoom();
   const catalog = loadCatalog();
 
   for (const seed of SEEDS) {
     if (handBuilt) {
+      if (readEntry(seed.prompt)?.origin === "gemini" && !force) {
+        console.log(`"${seed.prompt}": kept the recorded Gemini entry (use --force to overwrite)`);
+        continue;
+      }
       writeCache({
         prompt: seed.prompt,
         recordedAt: new Date().toISOString(),
@@ -112,6 +117,11 @@ async function main() {
         continue;
       }
       console.log(`"${seed.prompt}": ${res.attempts} attempt(s), ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+      if (!res.ok) {
+        const failed = res.derived.checks.filter((c) => !c.ok).map((c) => c.message);
+        console.error(`  FAILED checks, not cached:\n    - ${failed.join("\n    - ")}`);
+        continue;
+      }
       writeCache({
         prompt: seed.prompt,
         recordedAt: new Date().toISOString(),

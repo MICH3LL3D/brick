@@ -7,8 +7,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import { Design, Task, type Part } from "./contracts";
 import type { Room } from "./data";
-import { deriveAndCheck } from "./derive";
-import type { GenerateResult } from "./generate";
+import { checkWithReasons, type GenerateResult } from "./generate";
 import { simulate } from "./sim-stub"; // switch to "./sim" when A's sim.ts lands
 
 const CACHE_DIR = join(process.cwd(), "data/cache");
@@ -29,15 +28,27 @@ export function slug(prompt: string): string {
   return prompt.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 }
 
-export function readCache(prompt: string, room: Room, catalog: Part[]): GenerateResult | null {
+/** Cached result for a demo prompt, re-checked at `budgetUsd` (the request's budget) if given. */
+export function readCache(prompt: string, room: Room, catalog: Part[], budgetUsd?: number): GenerateResult | null {
+  const entry = readEntry(prompt);
+  if (!entry) return null;
+  const { task, attempts, repairNotes, origin } = entry;
+  const design = budgetUsd === undefined ? entry.design : { ...entry.design, budgetUsd };
+  const derived = checkWithReasons(design, task, room, catalog);
+  const sim = simulate(design, task, room, catalog);
+  const ok = derived.checks.every((c) => c.ok);
+  return { task, design, derived, sim, ok, attempts, repairNotes, source: "cache", cacheOrigin: origin };
+}
+
+export function readEntry(prompt: string): CacheEntry | null {
   const file = join(CACHE_DIR, `${slug(prompt)}.json`);
   if (!existsSync(file)) return null;
-  const parsed = CacheEntry.safeParse(JSON.parse(readFileSync(file, "utf8")));
-  if (!parsed.success) return null;
-  const { task, design, attempts, repairNotes } = parsed.data;
-  const derived = deriveAndCheck(design, task, room, catalog);
-  const sim = simulate(design, task, room, catalog);
-  return { task, design, derived, sim, attempts, repairNotes, source: "cache" };
+  try {
+    const parsed = CacheEntry.safeParse(JSON.parse(readFileSync(file, "utf8")));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null; // malformed file: behave as a cache miss
+  }
 }
 
 export function writeCache(entry: CacheEntry): string {

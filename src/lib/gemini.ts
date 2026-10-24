@@ -79,6 +79,8 @@ export async function generateWithFallback(
 }
 
 function isTransient(e: unknown): boolean {
+  const status = (e as { status?: number })?.status;
+  if (typeof status === "number") return status === 429 || status >= 500;
   const msg = e instanceof Error ? `${e.name} ${e.message}` : String(e);
-  return /abort|timed? ?out|503|429|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|ECONNRESET|fetch failed/i.test(msg);
+  return /AbortError|aborted|timed? ?out|"code":\s*(429|5\d\d)\b|UNAVAILABLE|RESOURCE_EXHAUSTED|INTERNAL|DEADLINE_EXCEEDED|high demand|ECONNRESET|socket hang up|other side closed|fetch failed/i.test(msg);
 }
