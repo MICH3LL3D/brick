@@ -1,4 +1,4 @@
-import { ThinkingLevel } from "@google/genai";
+import type { ThinkingLevel } from "@google/genai";
 
 // The ONLY place Gemini model ids appear. Verified against
 // https://ai.google.dev/gemini-api/docs/models on 2026-10-24 (all listed as stable).
@@ -23,5 +23,5 @@ export type ModelRole = keyof typeof MODELS;
  * "high" took 100 s+. Models not listed keep their default.
  */
 export const GENERATE_THINKING: Partial<Record<string, ThinkingLevel>> = {
-  [MODELS.FALLBACK_2]: ThinkingLevel.MEDIUM,
+  [MODELS.FALLBACK_2]: "MEDIUM" as ThinkingLevel, // type-only import keeps the SDK out of client bundles
 };

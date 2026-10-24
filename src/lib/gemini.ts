@@ -42,8 +42,8 @@ export function parseJsonText(text: string | undefined): unknown {
 /* ---------- Model fallback ---------- */
 
 const PRIMARY_COOLDOWN_MS = 5 * 60_000;
-/** Hedged mode: a model that was still thinking when another model won is skipped this long. */
-const SLOW_COOLDOWN_MS = 60_000;
+/** Hedged mode never runs more than this many models at once (each one is billed). */
+const MAX_IN_FLIGHT = 2;
 const degradedUntil = new Map<string, number>();
 
 type FallbackOptions = {
@@ -80,7 +80,8 @@ export async function generateWithFallback(
   };
   const timeoutFor = (model: string) => (model === params.model ? primaryTimeoutMs : fallbackTimeoutMs);
   const fail = (model: string, e: unknown, next: string | undefined) => {
-    console.warn(`[gemini] ${model} unavailable (${(e as Error).message.slice(0, 80)})${next ? `; trying ${next}` : ""}`);
+    const msg = String((e as Error)?.message ?? e).slice(0, 80);
+    console.warn(`[gemini] ${model} unavailable (${msg})${next ? `; trying ${next}` : ""}`);
     degradedUntil.set(model, Date.now() + PRIMARY_COOLDOWN_MS);
   };
 
@@ -99,7 +100,7 @@ export async function generateWithFallback(
   }
 
   return new Promise((resolve, reject) => {
-    const controllers: { abort: (slow: boolean) => void }[] = [];
+    const controllers: { abort: () => void }[] = [];
     let next = 0;
     let pending = 0;
     let done = false;
@@ -111,7 +112,7 @@ export async function generateWithFallback(
       if (done) return;
       done = true;
       clearTimeout(hedgeTimer);
-      for (const c of controllers) c.abort(Boolean(res));
+      for (const c of controllers) c.abort();
       if (res) resolve(res);
       else reject(err);
     };
@@ -126,15 +127,15 @@ export async function generateWithFallback(
       let lost = false;
       let settled = false;
       controllers.push({
-        abort: (slow) => {
+        // Losing a race is not a failure: no cooldown, so chat and the manual still use this model.
+        abort: () => {
           if (settled) return;
           lost = true;
-          if (slow) degradedUntil.set(model, Math.max(degradedUntil.get(model) ?? 0, Date.now() + SLOW_COOLDOWN_MS));
           ctrl.abort();
         },
       });
       pending++;
-      if (next < chain.length) hedgeTimer = setTimeout(launch, hedgeMs);
+      if (next < chain.length && pending < MAX_IN_FLIGHT) hedgeTimer = setTimeout(launch, hedgeMs);
       run(model, ctrl.signal)
         .finally(() => {
           clearTimeout(timer);
@@ -153,9 +154,10 @@ export async function generateWithFallback(
           (e) => {
             pending--;
             if (done || lost) return;
-            if (!isTransient(e)) return finish(e);
             lastError = e;
-            fail(model, e, chain[next]);
+            // A hard error (e.g. 400) from one model must not throw away another model's answer.
+            if (isTransient(e)) fail(model, e, chain[next]);
+            else console.warn(`[gemini] ${model} error: ${String((e as Error)?.message ?? e).slice(0, 80)}`);
             if (next < chain.length) launch();
             else if (pending === 0) finish(lastError, unusable);
           },
