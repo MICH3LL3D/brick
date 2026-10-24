@@ -4,7 +4,7 @@
 import dynamic from "next/dynamic";
 import { Component, useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { RobotPreview } from "../RobotPreview";
-import type { Offsets, SceneProps } from "./types";
+import type { SceneProps } from "./types";
 
 const RobotScene = dynamic(() => import("./RobotScene").then((m) => m.RobotScene), {
   ssr: false,
@@ -35,12 +35,7 @@ class Fallback extends Component<{ fallback: ReactNode; onError: () => void; chi
   render() { return this.state.failed ? this.props.fallback : this.props.children; }
 }
 
-type Props = Omit<SceneProps, "offsets" | "onMove"> & {
-  offsets2d: Offsets; offsets3d: Offsets;
-  onMove2d: SceneProps["onMove"]; onMove3d: SceneProps["onMove"];
-};
-
-export function Viewer(p: Props) {
+export function Viewer(p: SceneProps) {
   const supported = useSyncExternalStore(noop, hasWebGL, () => null);
   const [mode, setMode] = useState<"3d" | "2d">("3d");
   // A crash only disables 3D for the parts list it happened on; a new robot gets a fresh try.
@@ -62,7 +57,7 @@ export function Viewer(p: Props) {
   }, [show3d, sig]);
 
   const flat = (
-    <RobotPreview parts={p.parts} layers={p.layers} selectedId={p.selectedId} offsets={p.offsets2d} onSelect={p.onSelect} onMove={p.onMove2d} />
+    <RobotPreview parts={p.parts} layers={p.layers} selectedId={p.selectedId} onSelect={p.onSelect} />
   );
 
   return (
@@ -87,7 +82,7 @@ export function Viewer(p: Props) {
       {supported !== null && !can3d && <p id={noteId} className="viewer-note" role="status">3D view unavailable — showing 2D</p>}
       {supported === null ? null : show3d ? (
         <Fallback key={sig} fallback={flat} onError={() => setCrashedSig(sig)}>
-          <RobotScene parts={p.parts} layers={p.layers} selectedId={p.selectedId} offsets={p.offsets3d} onSelect={p.onSelect} onMove={p.onMove3d} />
+          <RobotScene parts={p.parts} layers={p.layers} selectedId={p.selectedId} onSelect={p.onSelect} />
         </Fallback>
       ) : flat}
     </div>

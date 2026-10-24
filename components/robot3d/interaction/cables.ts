@@ -4,14 +4,10 @@ import type { Placed, RobotLayout, Vec3 } from "@/lib/robot3d/layout";
 /** "wire": round signal/power cable. "ribbon": flat camera (CSI) ribbon, drawn differently. */
 export type CableKind = "wire" | "ribbon";
 export type Cable = { key: string; kind: CableKind; start: Vec3; end: Vec3; mid: Vec3 };
-export type OffsetsMm = Record<string, { x: number; y: number }>;
 
-const MM = 0.001;
-
-/** Top-centre of a placed part, moved by the user's deck offset (mm, x forward, y left). */
-function topOf(it: Placed, offsets?: OffsetsMm): Vec3 {
-  const o = offsets?.[it.key] ?? { x: 0, y: 0 };
-  return [it.pos[0] + o.x * MM, it.pos[1] + it.size[1] / 2, it.pos[2] + o.y * MM];
+/** Top-centre of a placed part. */
+function topOf(it: Placed): Vec3 {
+  return [it.pos[0], it.pos[1] + it.size[1] / 2, it.pos[2]];
 }
 
 /** Control point above the midpoint so the cable arcs upward and reads clearly. */
@@ -22,7 +18,7 @@ function arcMid(a: Vec3, b: Vec3, lift = 0.3): Vec3 {
 
 const isPca9685 = (it: Placed) => /pca9685/i.test(it.part.id) || /pca9685/i.test(it.part.name);
 
-export function cablesFor(layout: RobotLayout, offsets?: OffsetsMm): Cable[] {
+export function cablesFor(layout: RobotLayout): Cable[] {
   const items = layout.items;
   const of = (cat: string) => items.filter((it) => it.part.category === cat);
   const pi = of("controller")[0];
@@ -38,8 +34,8 @@ export function cablesFor(layout: RobotLayout, offsets?: OffsetsMm): Cable[] {
   const seen = new Set<string>();
   const add = (from: Placed | undefined, to: Placed | Vec3, toKey?: string, kind: CableKind = "wire") => {
     if (!from) return;
-    const a = topOf(from, offsets);
-    const b = Array.isArray(to) ? to : topOf(to, offsets);
+    const a = topOf(from);
+    const b = Array.isArray(to) ? to : topOf(to);
     const key = `${from.key}->${Array.isArray(to) ? toKey : to.key}`;
     if (seen.has(key)) return;
     seen.add(key);

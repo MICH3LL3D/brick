@@ -100,8 +100,7 @@ a { color: inherit; text-decoration: none; }
   .view-toggle { left: auto; right: 16px; top: 16px; transform: none; }
   .viewer-note { left: auto; right: 16px; top: 60px; transform: none; }
 }
-.part { cursor: grab; }
-.part:active { cursor: grabbing; }
+.part { cursor: pointer; }
 .hint { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: var(--muted); }
 
 /* part card */

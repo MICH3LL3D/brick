@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import { layoutRobot, type Vec3 } from "@/lib/robot3d/layout";
 import { ArmControls, ArmRig } from "./ArmRig";
-import { Selectable, Wiring, type DeckBounds } from "./Interaction";
+import { Selectable, Wiring } from "./Interaction";
 import { ChassisMesh, PartMesh, WheelMesh } from "./PartMesh";
 import { C } from "./theme";
 import type { SceneProps } from "./types";
@@ -33,15 +33,6 @@ export function RobotScene(p: SceneProps) {
   const layout = useMemo(() => layoutRobot(p.parts), [p.parts]);
   const [extend, setExtend] = useState(0);
   const span = Math.max(...layout.bounds, 0.2);
-  const MM = 0.001;
-  const chassisSize = layout.chassis?.size;
-  // Keep a dragged part over the deck and behind the arm base, inset by half its own size.
-  const deckFront = chassisSize && (layout.arm ? layout.arm.mount[0] - layout.arm.baseSize[0] / 2 : chassisSize[0] / 2);
-  const boundsFor = (size: [number, number, number]): DeckBounds | undefined =>
-    chassisSize && deckFront !== undefined ? {
-      minX: -chassisSize[0] / 2 + size[0] / 2, maxX: Math.max(-chassisSize[0] / 2 + size[0] / 2, deckFront - size[0] / 2),
-      minZ: -chassisSize[2] / 2 + size[2] / 2, maxZ: chassisSize[2] / 2 - size[2] / 2,
-    } : undefined;
 
   const toolNode = layout.tool && (
     <Selectable id={layout.tool.part.id} label={layout.tool.part.name} selected={p.selectedId === layout.tool.part.id} onSelect={p.onSelect}>
@@ -71,20 +62,13 @@ export function RobotScene(p: SceneProps) {
         )}
         {layout.wheels.map((w) => <WheelMesh key={w.key} wheel={w} />)}
 
-        {p.layers.parts && layout.items.map((it) => {
-          const o = p.offsets[it.key] ?? { x: 0, y: 0 };
-          return (
-            <Selectable
-              key={it.key} id={it.key} label={it.part.name} selected={p.selectedId === it.key}
-              draggable={it.role === "deck"} offsetMm={o} bounds={it.role === "deck" ? boundsFor(it.size) : undefined}
-              onSelect={p.onSelect} onDrag={(next) => p.onMove(it.key, next)}
-            >
-              <group position={[it.pos[0] + o.x * MM, it.pos[1], it.pos[2] + o.y * MM]}>
-                <PartMesh placed={it} selected={p.selectedId === it.key} />
-              </group>
-            </Selectable>
-          );
-        })}
+        {p.layers.parts && layout.items.map((it) => (
+          <Selectable key={it.key} id={it.key} label={it.part.name} selected={p.selectedId === it.key} onSelect={p.onSelect}>
+            <group position={it.pos}>
+              <PartMesh placed={it} selected={p.selectedId === it.key} />
+            </group>
+          </Selectable>
+        ))}
 
         {layout.arm && (
           <Selectable id={layout.arm.key} label={layout.arm.part.name} selected={p.selectedId === layout.arm.key} onSelect={p.onSelect}>
@@ -93,7 +77,7 @@ export function RobotScene(p: SceneProps) {
         )}
         {!layout.arm && toolNode}
 
-        <Wiring layout={layout} visible={p.layers.wiring} offsets={p.offsets} />
+        <Wiring layout={layout} visible={p.layers.wiring} />
         <OrbitControls
           makeDefault target={[0, layout.bounds[1] * LOOK_AT, 0]} minDistance={0.15} maxDistance={4}
           enablePan screenSpacePanning panSpeed={1.2}

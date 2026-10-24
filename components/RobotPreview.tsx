@@ -1,10 +1,7 @@
 "use client";
 
-import { useRef } from "react";
 import type { Part } from "@/lib/contracts";
 import type { Layers } from "./LayersPanel";
-
-export type Offsets = Record<string, { x: number; y: number }>;
 
 const INK = "#F2EDE4", MUTED = "#A39B90", GOLD = "#C8A56A", BLUE = "#3187A0", BG = "#0B0A09", PANEL = "#151412";
 
@@ -22,8 +19,7 @@ const labelOf = (x: Part) =>
   : (x.id.match(/pump|gripper|cam|tank|servo|adc|us-|dist|imu/)?.[0] ?? x.category).replace(/^us-|^dist/, "Range").replace(/^cam$/, "Camera").replace(/^[a-z]/, (c) => c.toUpperCase());
 
 // Side-view schematic drawn from the design's parts; matches the Paper frames, not a real 3D scene.
-export function RobotPreview(p: { parts: Part[]; layers: Layers; selectedId: string | null; offsets: Offsets; onSelect: (id: string | null) => void; onMove: (id: string, o: { x: number; y: number }) => void }) {
-  const drag = useRef<{ id: string; sx: number; sy: number; ox: number; oy: number } | null>(null);
+export function RobotPreview(p: { parts: Part[]; layers: Layers; selectedId: string | null; onSelect: (id: string | null) => void }) {
   const arm = p.parts.find((x) => x.category === "arm");
   const chassis = p.parts.find((x) => x.category === "chassis");
   const reach = arm?.caps.reachMm?.max ?? 0;
@@ -31,27 +27,10 @@ export function RobotPreview(p: { parts: Part[]; layers: Layers; selectedId: str
   const tip = { x: 244 + dx, y: 60 };
   const open = !p.layers.shell;
 
-  const toSvg = (e: React.PointerEvent) => {
-    const m = (e.currentTarget as SVGGraphicsElement).ownerSVGElement!.getScreenCTM()!.inverse();
-    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m);
-    return { x: pt.x, y: pt.y };
-  };
-  const down = (e: React.PointerEvent, id: string, movable: boolean) => {
+  const down = (e: React.PointerEvent, id: string) => {
     e.stopPropagation();
     p.onSelect(id);
-    if (!movable) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const o = p.offsets[id] ?? { x: 0, y: 0 };
-    const s = toSvg(e);
-    drag.current = { id, sx: s.x, sy: s.y, ox: o.x, oy: o.y };
   };
-  const move = (e: React.PointerEvent) => {
-    const d = drag.current;
-    if (!d) return;
-    const s = toSvg(e);
-    p.onMove(d.id, { x: d.ox + s.x - d.sx, y: d.oy + s.y - d.sy });
-  };
-  const up = () => { drag.current = null; };
 
   // Internals (battery, Pi, driver) sit inside the body; the first of each category takes its fixed slot.
   const placed = new Map<string, Box>();
@@ -79,7 +58,7 @@ export function RobotPreview(p: { parts: Part[]; layers: Layers; selectedId: str
       <ellipse cx="190" cy="228" rx="96" ry="17" fill="none" stroke="#242220" />
 
       {chassis && (
-        <g onPointerDown={(e) => down(e, chassis.id, false)} role="button" aria-label={chassis.name} style={{ cursor: "pointer" }}>
+        <g onPointerDown={(e) => down(e, chassis.id)} role="button" aria-label={chassis.name} style={{ cursor: "pointer" }}>
           {open && p.layers.frame && (
             <g>
               <rect x="92" y="156" width="196" height="48" rx="8" fill="none" stroke={sel(chassis.id) ? GOLD : MUTED} strokeWidth="1.25" strokeDasharray="4 4" opacity={sel(chassis.id) ? 1 : 0.45} />
@@ -103,9 +82,9 @@ export function RobotPreview(p: { parts: Part[]; layers: Layers; selectedId: str
       {p.layers.parts && (
         <g fontFamily="var(--mono)" fontSize="7" textAnchor="middle">
           {p.parts.filter((x) => placed.has(x.id)).map((x) => {
-            const b = placed.get(x.id)!, o = p.offsets[x.id] ?? { x: 0, y: 0 }, on = sel(x.id);
+            const b = placed.get(x.id)!, on = sel(x.id);
             return (
-              <g key={x.id} className="part" transform={`translate(${o.x} ${o.y})`} onPointerDown={(e) => down(e, x.id, true)} onPointerMove={move} onPointerUp={up} role="button" aria-label={x.name}>
+              <g key={x.id} className="part" onPointerDown={(e) => down(e, x.id)} role="button" aria-label={x.name}>
                 <rect x={b.x} y={b.y} width={b.w} height={b.h} rx="3" fill={on ? "#2A2418" : PANEL} stroke={inside(x) ? GOLD : MUTED} strokeWidth={on ? 2 : 1.25} />
                 <text x={b.x + b.w / 2} y={b.y + b.h / 2 + 3} fill={on ? INK : MUTED}>{labelOf(x)}</text>
                 {on && [[b.x - 3, b.y - 3], [b.x + b.w - 3, b.y - 3], [b.x - 3, b.y + b.h - 3], [b.x + b.w - 3, b.y + b.h - 3]].map(([cx, cy]) => <rect key={`${cx}${cy}`} x={cx} y={cy} width="6" height="6" fill={BG} stroke={GOLD} />)}
@@ -116,7 +95,7 @@ export function RobotPreview(p: { parts: Part[]; layers: Layers; selectedId: str
       )}
 
       {arm && (
-        <g onPointerDown={(e) => down(e, arm.id, false)} role="button" aria-label={arm.name} style={{ cursor: "pointer" }}>
+        <g onPointerDown={(e) => down(e, arm.id)} role="button" aria-label={arm.name} style={{ cursor: "pointer" }}>
           <path d={`M244 156 L244 98 L${tip.x - 4} ${tip.y}`} fill="none" stroke="transparent" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" />
           <path d={`M244 156 L244 98 L${tip.x - 4} ${tip.y}`} fill="none" stroke={sel(arm.id) ? GOLD : INK} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           <circle cx="244" cy="98" r="5" fill={BG} stroke={sel(arm.id) ? GOLD : INK} strokeWidth="1.5" />
