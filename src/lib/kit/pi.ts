@@ -33,6 +33,7 @@ type Hardware = {
   uses: Record<string, string>;       // consumer -> channel letter, e.g. drive_left -> "A"
   servo: Record<string, number[]>;    // consumer -> PCA9685 channels
   gpio: Record<string, number[]>;     // consumer -> raw GPIO pins (sensors)
+  armFeedbackPins: number[];          // hall sensor pins on a linear arm
   hasAdc: boolean;
 };
 
@@ -66,13 +67,17 @@ function hardware(design: Design, derived: Derived, catalog: Part[]): Hardware {
   const uses: Record<string, string> = {};
   const servo: Record<string, number[]> = {};
   const gpio: Record<string, number[]> = {};
+  let armFeedbackPins: number[] = [];
   for (const m of derived.pinMap) {
     const part = catalog.find((p) => p.id === m.partId);
     if (!part) continue;
     const letters = m.pins.map((p) => /^driver channel ([A-Z])/.exec(p)?.[1]).filter((x): x is string => !!x);
     const pca = m.pins.map((p) => /^PCA9685 ch(\d+)/.exec(p)?.[1]).filter(Boolean).map(Number);
     if (part.category === "chassis") { uses.drive_left = letters[0]; uses.drive_right = letters[1]; }
-    else if (isExtendable(part)) uses.arm = letters[0];
+    else if (isExtendable(part)) {
+      uses.arm = letters[0];
+      if (part.caps.feedback === "hall") armFeedbackPins = gpioNums(m.pins);
+    }
     else if (isPump(part) && letters.length) uses.pump = letters[0];
     if (pca.length) {
       if (part.category === "arm") servo.arm = pca;
@@ -89,7 +94,7 @@ function hardware(design: Design, derived: Derived, catalog: Part[]): Hardware {
       gpio[key] = gpioNums(m.pins);
     }
   }
-  return { channels, alwaysOn, uses, servo, gpio, hasAdc: r.parts.some((p) => /ads1115/.test(p.id)) };
+  return { channels, alwaysOn, uses, servo, gpio, armFeedbackPins, hasAdc: r.parts.some((p) => /ads1115/.test(p.id)) };
 }
 
 /* ---------- Python literal helpers ---------- */
@@ -134,6 +139,9 @@ export function piFiles(design: Design, task: Task, derived: Derived, sim: SimRe
   const homePath = sim.path.filter((p) => p.t > prevT).map((p) => [Math.round(p.x), Math.round(p.y)]);
 
   const strokeMm = linear ? Math.max(0, (arm.caps.liftMaxMm ?? 0) - arm.dims.h) : 0;
+  // Position feedback: hall pulses on GPIO, a pot read by the ADS1115, or (legacy parts without caps.feedback) the ADC if present.
+  const feedbackType = linear ? (arm.caps.feedback === "hall" && hw.armFeedbackPins.length ? "hall" : arm.caps.feedback === "none" ? "none" : hw.hasAdc ? "pot" : "none") : null;
+  const armFeedback = { type: feedbackType, pins: feedbackType === "hall" ? hw.armFeedbackPins : [] };
   const config = `# Generated configuration. Pin numbers use BCM numbering and match wiring.md.
 # This code has not been tested on hardware. Test with wheels off the ground first.
 
@@ -156,7 +164,7 @@ SERVO_CHANNELS = ${py(hw.servo)}
 # GPIO sensors: [trigger, echo] for ultrasonic, [out] for digital distance.
 SENSOR_PINS = ${py(hw.gpio)}
 
-HAS_ADC = ${py(hw.hasAdc)}  # ADS1115 reads the linear actuator feedback on channel 0
+HAS_ADC = ${py(hw.hasAdc)}  # ADS1115 reads a potentiometer-feedback actuator on channel 0
 HAS_CAMERA = ${py(hasCamera)}
 
 # Motion, from catalog values. Speeds are fractions of full power.
@@ -169,7 +177,9 @@ WHEEL_BASE_MM = ${py(chassis?.dims.w ?? 150)}
 
 ARM_TYPE = ${py(linear ? "linear" : arm ? "servo" : null)}
 ARM_STROKE_MM = ${py(strokeMm)}
-ARM_SPEED_MM_S = 14.0                 # about 0.57 in/s for the Glideforce actuators
+ARM_SPEED_MM_S = ${py(linear && arm.caps.speedMmS !== undefined ? arm.caps.speedMmS : 14.0)}  # stroke speed under load, from the catalog (14 mm/s if unknown)
+ARM_FEEDBACK = ${py(armFeedback)}  # "hall" counts pulses on these GPIO pins, "pot" reads the ADC, "none" uses timing
+ARM_PULSES_PER_MM = 1.0               # TODO: calibrate. Run the arm a known distance and count hall pulses.
 ARM_LIFT_MAX_MM = ${py(arm?.caps.liftMaxMm ?? 0)}
 
 PUMP_ML_PER_S = ${py(r.parts.find(isPump)?.caps.pumpMlPerS ?? 0)}
@@ -293,10 +303,10 @@ import time
 import config
 from drivers.servo_board import kit
 
-# Angles per joint, in servo channel order (base, shoulder, elbow, wrist/claw).
+# Angles per joint, in servo channel order (base, shoulder, elbow, wrist..., claw). Extra entries are unused.
 # These are starting guesses. Calibrate each joint alone before running main.py.
-REST = [90, 150, 30, 90]
-REACH = [90, 90, 90, 90]
+REST = [90, 150, 30, 90, 90, 90]
+REACH = [90, 90, 90, 90, 90, 90]
 
 
 class ServoArm:
@@ -318,7 +328,9 @@ class ServoArm:
         pass  # servos hold their last angle
 `;
 
-  const linearArm = `"""Linear actuator lift on a motor channel. Uses ADS1115 feedback if present, else timing."""
+  const linearArm = `"""Linear actuator lift on a motor channel.
+Position comes from hall pulses (GPIO), a feedback pot (ADS1115), or timing, per config.ARM_FEEDBACK.
+"""
 import time
 
 import config
@@ -330,19 +342,58 @@ class LinearArm:
         self.channel = Channel(config.ARM_CHANNEL)
         self.position_mm = 0.0
         self.adc = None
-        if config.HAS_ADC:
+        self.hall = None
+        self.pulses = 0
+        self.direction = 0
+        feedback = config.ARM_FEEDBACK.get("type")
+        if feedback == "hall" and config.ARM_FEEDBACK.get("pins"):
+            from gpiozero import DigitalInputDevice
+            self.hall = DigitalInputDevice(config.ARM_FEEDBACK["pins"][0], pull_up=True)
+            self.hall.when_activated = self._on_pulse
+        elif feedback == "pot" and config.HAS_ADC:
             import board
             import busio
             import adafruit_ads1x15.ads1115 as ADS
             from adafruit_ads1x15.analog_in import AnalogIn
             self.adc = AnalogIn(ADS.ADS1115(busio.I2C(board.SCL, board.SDA)), ADS.P0)
 
+    def _on_pulse(self):
+        # One pulse per magnet pass; the motor direction says which way the rod moved.
+        self.pulses += self.direction
+
+    def _hall_mm(self):
+        return max(0.0, min(self.pulses / config.ARM_PULSES_PER_MM, config.ARM_STROKE_MM))
+
     def _read_mm(self):
         # Feedback pot powered from 3.3V: 0 V = retracted, 3.3 V = full stroke.
         return max(0.0, min(1.0, self.adc.voltage / 3.3)) * config.ARM_STROKE_MM
 
+    def _move_hall(self, mm, power, timeout_s):
+        start = time.time()
+        last_pulses, last_change = self.pulses, time.time()
+        while time.time() - start < timeout_s:
+            error = mm - self._hall_mm()
+            if abs(error) < 2:
+                break
+            if self.pulses != last_pulses:
+                last_pulses, last_change = self.pulses, time.time()
+            elif time.time() - last_change > 1.5:
+                # No pulses for 1.5 s: at an end stop, stalled, or the hall wire is loose.
+                print("arm: no hall pulses, stopping for safety")
+                break
+            self.direction = 1 if error > 0 else -1
+            self.channel.run(power * self.direction)
+            time.sleep(0.01)
+        self.channel.stop()
+        time.sleep(0.1)  # let the last pulses arrive before clearing the direction
+        self.direction = 0
+        self.position_mm = self._hall_mm()
+
     def move_to(self, mm, power=0.8, timeout_s=30.0):
         mm = max(0.0, min(float(mm), config.ARM_STROKE_MM))
+        if self.hall is not None:
+            self._move_hall(mm, power, timeout_s)
+            return
         if self.adc is not None:
             start = time.time()
             last, last_change = self._read_mm(), time.time()

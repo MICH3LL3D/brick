@@ -12,7 +12,7 @@ import { piFiles, type KitFile } from "./pi";
 import { wiringMd } from "./wiring";
 
 /** Checks the generated code depends on. If any fails, the pin or channel mapping is not real. */
-const BLOCKING_CHECKS = ["part-ids", "structure", "motor-channels", "pin-budget", "pwm-board"];
+const BLOCKING_CHECKS = ["part-ids", "structure", "motor-channels", "motor-current", "pin-budget", "pwm-board", "arm-feedback"];
 
 export class KitCheckError extends Error {
   constructor(public errors: string[]) {

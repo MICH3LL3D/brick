@@ -65,6 +65,13 @@ export const isExtendable = (p: Part) => p.category === "arm" && !!p.caps.reachM
 const needsMotorChannel = (p: Part) => (isExtendable(p) || isPump(p)) && p.caps.interface === "gpio";
 /** I2C motor HATs carry two driver chips (4 channels); breakouts have 2. */
 const driverChannels = (p: Part) => (p.caps.interface === "i2c" ? 4 : 2);
+/** Batteries below this sag too far under load to feed a 5V buck regulator reliably (6V packs). */
+export const MIN_REGULATOR_INPUT_V = 7;
+/** Driver suggested for 12V actuators that stall above what the small drivers give. */
+const HEAVY_DRIVER_ID = "md-g2-24v14";
+/** Pin role names for hall-effect position feedback on a linear arm, in pin order. */
+export const HALL_PIN_ROLES = ["HALL A", "HALL B", "HALL C", "HALL D"];
+const hasAdcPart = (parts: Part[]) => parts.some((p) => /ads1115/i.test(p.id));
 
 /** Height of the deck the arm stands on. */
 export function deckHeightMm(r: Resolved): number {
@@ -148,6 +155,8 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
   if (count("controller") !== 1) structureProblems.push(`needs exactly one Raspberry Pi (has ${count("controller")})`);
   if (count("chassis") !== 1) structureProblems.push(`needs exactly one chassis (has ${count("chassis")})`);
   if (count("arm") > 1) structureProblems.push(`can carry only one arm (has ${count("arm")})`);
+  const gripperCount = parts.filter(isGripper).length;
+  if (gripperCount > 1) structureProblems.push(`can carry only one gripper (has ${gripperCount})`);
   if (batteries.length < 1) structureProblems.push("needs a battery");
   if (batteries.length > 2) structureProblems.push(`has ${batteries.length} batteries; use one for logic and at most one for motors`);
   if (chassis && drivers.length < 1) structureProblems.push("needs a motor driver: the Pi cannot drive motors from its pins");
@@ -162,13 +171,74 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
   /* 3. Motor driver channels: 2 for the wheels, plus one per actuator or DC pump */
   const channelsNeeded = (chassis ? 2 : 0) + parts.filter(needsMotorChannel).length;
   const channelsHave = drivers.reduce((s, p) => s + driverChannels(p), 0);
+  // Consumers in the order the pin map hands out channel letters: wheels (left, right), then actuators and pumps.
+  // A chassis's stallA is per side: one channel drives all the wheels on that side.
+  const consumers: { part: Part; label: string; stallA?: number; wheels: boolean }[] = [];
+  for (const p of parts) {
+    if (p.category === "chassis") {
+      const stallA = p.caps.stallA;
+      consumers.push({ part: p, label: `${p.name} (left wheels)`, stallA, wheels: true }, { part: p, label: `${p.name} (right wheels)`, stallA, wheels: true });
+    } else if (needsMotorChannel(p)) {
+      consumers.push({ part: p, label: p.name, stallA: p.caps.stallA, wheels: false });
+    }
+  }
+  // Channel letters follow the drivers in the order they are listed (same as the kit's motor setup).
+  const channelSources = drivers.flatMap((d) => Array.from({ length: driverChannels(d) }, () => d));
+  const heavyConsumers = consumers.filter((c) => !c.wheels && (c.stallA ?? 0) > Math.max(0, ...drivers.filter((d) => d.id !== HEAVY_DRIVER_ID).map((d) => d.caps.maxCurrentA ?? 0), 1.2));
   add(
     "motor-channels",
     channelsHave >= channelsNeeded,
     channelsHave >= channelsNeeded
       ? `Motor drivers give ${channelsHave} channels; ${channelsNeeded} needed.`
-      : `Needs ${channelsNeeded} motor channels (2 for wheels, plus one per linear actuator or DC pump) but the drivers only give ${channelsHave}. Add a motor driver or use a 4-channel motor HAT.`,
+      : `Needs ${channelsNeeded} motor channels (2 for wheels, plus one per linear actuator or DC pump) but the drivers only give ${channelsHave}. ` +
+        (heavyConsumers.length
+          ? `Add a high-current driver such as ${HEAVY_DRIVER_ID} (2 channels, 14 A each) for ${heavyConsumers.map((c) => c.label).join(", ")}.`
+          : "Add a motor driver or use a 4-channel motor HAT."),
   );
+
+  /* 3b. Motor current: each channel must supply its consumer's stall current */
+  // Actuators and pumps hold stall at their end stops, so an undersized channel fails. Wheels stall only
+  // briefly (start-up, bumping a wall), so an undersized wheel channel is a warning, not a failure.
+  if (consumers.some((c) => c.stallA !== undefined)) {
+    const overloads: string[] = [];
+    const wheelWarnings = new Set<string>();
+    consumers.forEach((c, i) => {
+      const driver = channelSources[i];
+      if (c.stallA === undefined || !driver || driver.caps.maxCurrentA === undefined) return;
+      if (driver.caps.maxCurrentA >= c.stallA) return;
+      if (c.wheels) {
+        wheelWarnings.add(`wheel motors can briefly pull ${round1(c.stallA)} A at stall; the ${round1(driver.caps.maxCurrentA)} A ${driver.name} may cut out under heavy load`);
+      } else {
+        overloads.push(`the ${c.label} can pull ${round1(c.stallA)} A but driver channel ${String.fromCharCode(65 + i)} on the ${driver.name} gives only ${round1(driver.caps.maxCurrentA)} A`);
+      }
+    });
+    const warning = wheelWarnings.size ? ` Warning: ${[...wheelWarnings].join("; ")}.` : "";
+    add(
+      "motor-current",
+      overloads.length === 0,
+      overloads.length === 0
+        ? `Every actuator and pump gets enough current from its driver channel.${warning}`
+        : `${capitalize(overloads.join("; "))}. Use a ${HEAVY_DRIVER_ID} driver (14 A per channel) for 12V actuators.${warning}`,
+    );
+  }
+
+  /* 3c. Linear arm position feedback */
+  const fb = arm && isExtendable(arm) ? arm.caps.feedback : undefined;
+  if (arm && (fb === "pot" || fb === "hall")) {
+    const hallPins = arm.caps.pins ?? 0;
+    const ok = fb === "pot" ? hasAdcPart(parts) : hallPins > 0;
+    add(
+      "arm-feedback",
+      ok,
+      fb === "pot"
+        ? ok
+          ? `The ${arm.name} position sensor is read by the ADC.`
+          : `The ${arm.name} reports its position with a potentiometer, which the Pi cannot read directly. Add an ADS1115 ADC board (adc-ads1115).`
+        : ok
+          ? `The ${arm.name} hall sensor uses ${hallPins} GPIO pin${hallPins === 1 ? "" : "s"} to count its travel.`
+          : `The ${arm.name} has a hall position sensor but no GPIO pins are set aside for it.`,
+    );
+  }
 
   /* 4. Pin budget + pin map */
   const pinMap: Derived["pinMap"] = [];
@@ -198,9 +268,11 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
       pins.push(motorChannelName());
     }
     const want = p.caps.pins ?? 0;
+    // Hall feedback pins on a linear arm are labelled so wiring.md shows which wire goes where.
+    const roles = isExtendable(p) && p.caps.feedback === "hall" ? HALL_PIN_ROLES : [];
     for (let i = 0; i < want; i++) {
       const bcm = gpioOrder[gpioUsed++];
-      pins.push(bcm === undefined ? "NO PIN LEFT" : `GPIO${bcm}`);
+      pins.push(bcm === undefined ? "NO PIN LEFT" : roles[i] ? `GPIO${bcm} = ${roles[i]}` : `GPIO${bcm}`);
     }
     if (pins.length) pinMap.push({ partId: p.id, pins });
   }
@@ -230,7 +302,8 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
 
   /* 6. Power: 5V supply for the Pi */
   const fiveVoltSources = parts.filter((p) => p.category === "power" && p.caps.outputV === 5);
-  const highVoltBattery = batteries.some((b) => (b.caps.outputV ?? 0) > 5.5);
+  // A buck regulator needs headroom above 5V; 6V packs sag below it under motor load.
+  const highVoltBattery = batteries.some((b) => (b.caps.outputV ?? 0) >= MIN_REGULATOR_INPUT_V);
   const usbPacks = fiveVoltSources.filter(isBattery);
   const regulators = fiveVoltSources.filter(isRegulator);
   const piNeedA = controller ? PI_SUPPLY_A[controller.id] ?? 3 : 0;
@@ -243,8 +316,8 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
   if (!controller) supplyMsg = "No Raspberry Pi to power.";
   else if (best5vA === 0)
     supplyMsg = regulators.length
-      ? "The 5V regulator needs a battery above 5.5V to feed it."
-      : "The Pi needs a 5V supply: add a USB battery pack or a 5V regulator fed from a 6V+ battery.";
+      ? `The 5V regulator needs a battery of ${MIN_REGULATOR_INPUT_V}V or more to feed it. A 6V pack drops too low when the motors run.`
+      : `The Pi needs a 5V supply: add a USB battery pack or a 5V regulator fed from a ${MIN_REGULATOR_INPUT_V}V or higher battery.`;
   else if (best5vA < piNeedA)
     supplyMsg = `The Pi's 5V supply gives only ${best5vA}A but the ${controller.name} needs ${piNeedA}A. Use a 5V step-down regulator rated ${piNeedA}A or more.`;
   else supplyMsg = `The Pi gets ${best5vA}A at 5V (needs ${piNeedA}A).`;
@@ -392,12 +465,14 @@ export function failureText(derived: Derived): string {
     .join("\n");
 }
 
-/** Rough servo count for PWM parts, so the pin map names real channels. */
-function servoCount(p: Part): number {
-  if (p.category === "arm") return /4-dof|mearm/i.test(p.id + p.name) ? 4 : 2;
+/** Servo count for PWM parts (caps.servoCount, else a guess from the name), so the pin map names real channels. */
+export function servoCount(p: Part): number {
+  if (p.caps.servoCount !== undefined) return p.caps.servoCount;
+  if (p.category === "arm") return /6-?dof/i.test(p.id + p.name) ? 6 : /4-?dof|mearm/i.test(p.id + p.name) ? 4 : 2;
   if (/pan-tilt|pantilt/i.test(p.id + p.name)) return 2;
   return 1;
 }
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const round2 = (n: number) => Math.round(n * 100) / 100;
