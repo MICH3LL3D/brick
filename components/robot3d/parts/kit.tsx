@@ -7,7 +7,10 @@ import { C } from "../theme";
 
 export type V3 = [number, number, number];
 
-/** Unit geometries (1 m box; cylinders of diameter 1, height 1 along y). */
+/**
+ * Unit geometries (1 m box; cylinders of diameter 1, height 1 along y). Meshes using these or the
+ * cached materials set dispose={null} so unmounting one part never frees what others share.
+ */
 export const BOX = new THREE.BoxGeometry(1, 1, 1);
 const CYL = new THREE.CylinderGeometry(0.5, 0.5, 1, 20);
 const CYL_HI = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
@@ -40,28 +43,28 @@ export function mat(color: string, look: Look = {}, selected = false): THREE.Mes
 export const Selected = createContext(false);
 
 const ROT: Record<"x" | "y" | "z", V3> = { x: [0, 0, Math.PI / 2], y: [0, 0, 0], z: [Math.PI / 2, 0, 0] };
-const noRaycast = () => {};
+export const noRaycast = () => {};
 
 /** Box of size `s` centred at `p`. */
 export function Box({ s, p, r, c, look }: { s: V3; p?: V3; r?: V3; c: string; look?: Look }) {
   const sel = useContext(Selected);
   const see = (look?.opacity ?? 1) < 1;
-  return <mesh geometry={BOX} material={mat(c, look, sel)} scale={s} position={p} rotation={r} castShadow={!see} receiveShadow={!see} />;
+  return <mesh geometry={BOX} material={mat(c, look, sel)} scale={s} position={p} rotation={r} castShadow={!see} receiveShadow={!see} dispose={null} />;
 }
 
 /** Cylinder of diameter `d` and length `len` along `axis`, centred at `p`. */
-export function Cyl(props: { d: number; len: number; p?: V3; axis?: "x" | "y" | "z"; c: string; look?: Look; detail?: "lo" | "hi" }) {
-  const { d, len, p, axis = "y", c, look, detail } = props;
+export function Cyl(props: { d: number; len: number; p?: V3; axis?: "x" | "y" | "z"; c: string; look?: Look; detail?: "lo" | "hi"; order?: number }) {
+  const { d, len, p, axis = "y", c, look, detail, order } = props;
   const sel = useContext(Selected);
   const see = (look?.opacity ?? 1) < 1;
   const geo = detail === "lo" ? CYL_LO : detail === "hi" ? CYL_HI : CYL;
-  return <mesh geometry={geo} material={mat(c, look, sel)} scale={[d, len, d]} position={p} rotation={ROT[axis]} castShadow={!see} receiveShadow={!see} />;
+  return <mesh geometry={geo} material={mat(c, look, sel)} scale={[d, len, d]} position={p} rotation={ROT[axis]} renderOrder={order} castShadow={!see} receiveShadow={!see} dispose={null} />;
 }
 
 /** Thin gold outline around a selected part's bounding box. Not clickable. */
 export function SelectBox({ size }: { size: V3 }) {
   const pad = 0.004;
-  return <lineSegments geometry={BOX_EDGES} material={SELECT_LINE} scale={[size[0] + pad, size[1] + pad, size[2] + pad]} raycast={noRaycast} />;
+  return <lineSegments geometry={BOX_EDGES} material={SELECT_LINE} scale={[size[0] + pad, size[1] + pad, size[2] + pad]} raycast={noRaycast} dispose={null} />;
 }
 
 /** Common colours for parts that are not the category tint. */

@@ -26,7 +26,7 @@ export function UsbPack({ s }: { s: V3 }) {
   );
 }
 
-/** Cells lying along x in a cols (z) by rows (y) grid. */
+/** Cells lying along x in a cols (z) by rows (y) grid, positive caps included, spanning exactly l. */
 function Cells({ l, d, cols, rows, y0 }: { l: number; d: number; cols: number; rows: number; y0: number }) {
   const out = [];
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
@@ -34,8 +34,8 @@ function Cells({ l, d, cols, rows, y0 }: { l: number; d: number; cols: number; r
     const y = y0 + d / 2 + r * d;
     out.push(
       <group key={`${r}-${c}`}>
-        <Cyl d={d * 0.96} len={l * 0.92} p={[0, y, z]} axis="x" c={CATEGORY_COLOR.power} look={{ metal: 0.3, rough: 0.45 }} />
-        <Cyl d={d * 0.35} len={l * 0.08} p={[l * 0.5, y, z]} axis="x" c={K.silver} look={SILVER} detail="lo" />
+        <Cyl d={d * 0.96} len={l * 0.92} p={[-l * 0.04, y, z]} axis="x" c={CATEGORY_COLOR.power} look={{ metal: 0.3, rough: 0.45 }} />
+        <Cyl d={d * 0.35} len={l * 0.08} p={[l * 0.46, y, z]} axis="x" c={K.silver} look={SILVER} detail="lo" />
       </group>,
     );
   }
@@ -57,16 +57,20 @@ export function AaHolder({ s }: { s: V3 }) {
   );
 }
 
+const MAX_CELLS = 24;
+
 /** Shrink-wrapped NiMH stick pack: a grid of cells inside a tinted wrap. */
 export function NimhPack({ s, aaa }: { s: V3; aaa: boolean }) {
   const [l, h, w] = s;
   const d0 = aaa ? 0.0105 : 0.0145;
-  const cols = Math.max(1, Math.round(w / d0));
-  const rows = Math.max(1, Math.round(h / d0));
+  let cols = Math.max(1, Math.round(w / d0));
+  let rows = Math.max(1, Math.round(h / d0));
+  // Cap the cell count so an oversized custom pack cannot explode draw calls.
+  while (cols * rows > MAX_CELLS) { if (cols >= rows) cols--; else rows--; }
   const d = Math.min(w / cols, h / rows);
   return (
     <group>
-      <Cells l={l * 0.96} d={d} cols={cols} rows={rows} y0={-h / 2 + (h - rows * d) / 2} />
+      <Cells l={l} d={d} cols={cols} rows={rows} y0={-h / 2 + (h - rows * d) / 2} />
       <Box s={[l, h, w]} c={CATEGORY_COLOR.power} look={{ opacity: 0.22, rough: 0.3 }} />
       <Box s={[l * 0.06, h * 0.3, w * 0.4]} p={[-l / 2 + l * 0.03, h * 0.2, 0]} c={K.tube} />
     </group>
@@ -82,8 +86,8 @@ export function Tank({ s }: { s: V3 }) {
   const y0 = -h / 2;
   return (
     <group>
-      <Cyl d={d * 0.92} len={body * 0.6} p={[0, y0 + body * 0.3 + 0.001, 0]} c={K.water} look={{ opacity: 0.75, rough: 0.2 }} detail="hi" />
-      <Cyl d={d} len={body} p={[0, y0 + body / 2, 0]} c={K.bottle} look={{ opacity: 0.22, rough: 0.1 }} detail="hi" />
+      <Cyl d={d * 0.92} len={body * 0.6} p={[0, y0 + body * 0.3 + 0.001, 0]} c={K.water} look={{ opacity: 0.75, rough: 0.2 }} detail="hi" order={1} />
+      <Cyl d={d} len={body} p={[0, y0 + body / 2, 0]} c={K.bottle} look={{ opacity: 0.22, rough: 0.1 }} detail="hi" order={2} />
       <Cyl d={d * 0.82} len={capH} p={[0, y0 + body + capH / 2, 0]} c={CATEGORY_COLOR.tool} detail="hi" />
     </group>
   );

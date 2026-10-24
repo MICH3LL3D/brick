@@ -6,15 +6,15 @@ import type { Part } from "@/lib/contracts";
 import type { Placed, Wheel } from "@/lib/robot3d/layout";
 import { AaHolder, Gripper, NimhPack, PanTilt, PeristalticPump, Rounded, SubmersiblePump, Tank, UsbPack } from "./parts/mechanical";
 import { Breakout, Camera, DistanceIR, RaspberryPi, Regulator, Ultrasonic } from "./parts/electronics";
-import { BOX, Box, Cyl, K, mat, Selected, SelectBox, SILVER, type V3 } from "./parts/kit";
+import { BOX, Box, Cyl, K, mat, noRaycast, Selected, SelectBox, SILVER, type V3 } from "./parts/kit";
 import { C, CATEGORY_COLOR } from "./theme";
 
 /**
  * Chassis: deck plate on top, body below, gearmotors inside.
  * Mirrors the 2D layers: `shell` draws a solid body; without it the body is a faint ghost so the
- * motors show. `frame` adds side rails, corner posts and outline edges (dashed when open).
+ * motors show (and clicks pass through it). `frame` adds side rails, corner posts and outline edges (dashed when open).
  */
-export function ChassisMesh({ placed, shell, frame }: { placed: Placed; shell: boolean; frame: boolean }) {
+export function ChassisMesh({ placed, shell, frame, selected = false }: { placed: Placed; shell: boolean; frame: boolean; selected?: boolean }) {
   const [l, h, w] = placed.size;
   const t = Math.min(0.005, Math.max(0.002, h * 0.06));
   const bodyH = h - t;
@@ -22,32 +22,34 @@ export function ChassisMesh({ placed, shell, frame }: { placed: Placed; shell: b
   const rail = Math.min(h, w) * 0.06;
   const four = (placed.part.caps.wheels ?? 2) >= 4;
   const motorXs = four ? [l * 0.32, -l * 0.32] : [0];
-  const bodyMat = shell ? mat(CATEGORY_COLOR.chassis, { rough: 0.6 }) : mat(C.muted, { opacity: 0.1, rough: 0.4 });
+  const bodyMat = shell ? mat(CATEGORY_COLOR.chassis, { rough: 0.6 }, selected) : mat(C.muted, { opacity: 0.1, rough: 0.4 }, selected);
   return (
-    <group position={placed.pos}>
-      <Box s={[l, t, w]} p={[0, h / 2 - t / 2, 0]} c="#3A3632" look={{ metal: 0.6, rough: 0.45 }} />
-      <mesh geometry={BOX} material={bodyMat} scale={[l * 0.94, bodyH, w * 0.86]} position={[0, bodyY, 0]} castShadow={shell} receiveShadow>
+    <Selected.Provider value={selected}>
+      <group position={placed.pos}>
+        <Box s={[l, t, w]} p={[0, h / 2 - t / 2, 0]} c="#3A3632" look={{ metal: 0.6, rough: 0.45 }} />
+        <mesh geometry={BOX} material={bodyMat} scale={[l * 0.94, bodyH, w * 0.86]} position={[0, bodyY, 0]} castShadow={shell} receiveShadow dispose={null} raycast={shell ? undefined : noRaycast} />
         {frame && (
-          <Edges color={shell ? C.ink : C.muted} lineWidth={1.25} dashed={!shell} dashSize={0.006} gapSize={0.006} transparent opacity={shell ? 0.5 : 0.7} />
+          <Edges geometry={BOX} scale={[l * 0.94, bodyH, w * 0.86]} position={[0, bodyY, 0]} color={shell ? C.ink : C.muted} lineWidth={1.25} dashed={!shell} dashSize={0.006} gapSize={0.006} transparent opacity={shell ? 0.5 : 0.7} />
         )}
-      </mesh>
-      {!shell && motorXs.map((x) => [-1, 1].map((k) => (
-        <group key={`${x}${k}`}>
-          <Box s={[Math.min(l * 0.25, 0.07), bodyH * 0.4, w * 0.2]} p={[x, bodyY - bodyH * 0.25, k * w * 0.3]} c={CATEGORY_COLOR.power} />
-          <Cyl d={bodyH * 0.12} len={w * 0.08} p={[x, bodyY - bodyH * 0.25, k * w * 0.43]} axis="z" c={K.silver} look={SILVER} detail="lo" />
-        </group>
-      )))}
-      {frame && !shell && (
-        <>
-          {[-1, 1].map((k) => [1, -1].map((v) => (
-            <Box key={`r${k}${v}`} s={[l * 0.96, rail, rail]} p={[0, bodyY + v * (bodyH / 2 - rail / 2), k * (w * 0.43 - rail / 2)]} c={C.muted} look={SILVER} />
-          )))}
-          {[-1, 1].map((k) => [-1, 1].map((x) => (
-            <Box key={`p${k}${x}`} s={[rail, bodyH, rail]} p={[x * (l * 0.47 - rail / 2), bodyY, k * (w * 0.43 - rail / 2)]} c={C.muted} look={SILVER} />
-          )))}
-        </>
-      )}
-    </group>
+        {!shell && motorXs.map((x) => [-1, 1].map((k) => (
+          <group key={`${x}${k}`}>
+            <Box s={[Math.min(l * 0.25, 0.07), bodyH * 0.4, w * 0.2]} p={[x, bodyY - bodyH * 0.25, k * w * 0.3]} c={CATEGORY_COLOR.power} />
+            <Cyl d={bodyH * 0.12} len={w * 0.08} p={[x, bodyY - bodyH * 0.25, k * w * 0.43]} axis="z" c={K.silver} look={SILVER} detail="lo" />
+          </group>
+        )))}
+        {frame && !shell && (
+          <>
+            {[-1, 1].map((k) => [1, -1].map((v) => (
+              <Box key={`r${k}${v}`} s={[l * 0.96, rail, rail]} p={[0, bodyY + v * (bodyH / 2 - rail / 2), k * (w * 0.43 - rail / 2)]} c={C.muted} look={SILVER} />
+            )))}
+            {[-1, 1].map((k) => [-1, 1].map((x) => (
+              <Box key={`p${k}${x}`} s={[rail, bodyH, rail]} p={[x * (l * 0.47 - rail / 2), bodyY, k * (w * 0.43 - rail / 2)]} c={C.muted} look={SILVER} />
+            )))}
+          </>
+        )}
+        {selected && <SelectBox size={placed.size} />}
+      </group>
+    </Selected.Provider>
   );
 }
 
