@@ -16,7 +16,7 @@
     "budgetUsd": 400,
     "expect": {
       "feasible": true,
-      "needs": { "reachHeightMm": [300, 1000], "gripWidthMm": [50, 90], "liftMassG": [250, 600] },
+      "needs": { "reachHeightMm": [300, 1000], "gripWidthMm": [50, 75], "liftMassG": [250, 600] },
       "mustInclude": [{ "anyOf": ["tool-gripper"] }],
       "mustNotInclude": ["tool-pump-*", "tank-*"]
     }
@@ -67,11 +67,11 @@
   },
   {
     "id": "carry-groceries",
-    "prompt": "Carry a bag of groceries from the front door to the kitchen",
+    "prompt": "Carry a small bag of groceries (a few cans and a loaf of bread) from the front door to the kitchen",
     "budgetUsd": 400,
     "expect": {
       "feasible": true,
-      "needs": { "carryMassG": [1000, 10000], "liquidMl": [0, 0] },
+      "needs": { "carryMassG": [800, 4000], "liquidMl": [0, 0] },
       "mustNotInclude": ["tank-*", "tool-pump-*"]
     }
   },

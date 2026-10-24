@@ -8,18 +8,21 @@
 //   --requirements-only   only run extractRequirements (1 cheap call per prompt); skips part rules
 //   --only <substring>    run prompts whose id or text contains the substring (case-insensitive)
 //   --limit N             run at most N prompts (after --only)
-//   --timeout-ms N        per-prompt timeout (default 120000; 30000 with --requirements-only)
-//   --out <path>          JSON results file (default: <os.tmpdir()>/eval-generate-<timestamp>.json)
+//   --timeout-ms N        per-prompt timeout (default 120000; 60000 with --requirements-only)
+//   --out <path>          JSON results file (default: data/eval/runs/eval-<timestamp>.json, gitignored)
 //
 // Scoring per prompt:
 //   feasible       requirements.feasible matches expect.feasible (when given)
 //   needs          each expect.needs key: number within [min, max] inclusive, boolean equal
 //   include        each expect.mustInclude rule: some part has that category or an id in anyOf
 //   exclude        no part matches an expect.mustNotInclude entry (part id, "prefix-*", or category)
+//   unknown-parts  every part id Gemini returned exists in the catalog
 //   ok/attempts    from generateDesign; cost = derived.totalUsd vs budgetUsd
-// Prompts run sequentially. A timed-out prompt is scored as an error; its call is not cancelled.
+// Errored or timed-out prompts count every expectation as failed, so checksTotal is the same
+// whether or not a run errors. Prompts run sequentially. generateDesign takes no abort signal, so
+// after a timeout the harness waits for the orphaned call (up to ORPHAN_WAIT_MS) before the next
+// prompt; Gemini calls never overlap.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import type { Part } from "../src/lib/contracts";
 import { loadCatalog, loadRoom } from "../src/lib/data";
@@ -35,13 +38,14 @@ type EvalCase = {
   budgetUsd: number;
   expect: { feasible?: boolean; needs?: Needs; mustInclude?: IncludeRule[]; mustNotInclude?: string[] };
 };
-type CheckResult = { kind: "feasible" | "needs" | "include" | "exclude" | "budget" | "ok"; name: string; pass: boolean; detail: string };
+type CheckResult = { kind: "feasible" | "needs" | "include" | "exclude" | "unknown-parts" | "budget" | "ok"; name: string; pass: boolean; detail: string };
 type CaseResult = {
   id: string;
   prompt: string;
   budgetUsd: number;
   latencyMs: number;
   error?: string;
+  timedOut?: boolean;
   requirements?: RequirementsT;
   partIds?: string[];
   totalUsd?: number;
@@ -52,7 +56,19 @@ type CaseResult = {
   checks: CheckResult[];
 };
 
+const SCRIPT_DIR = __dirname;
+const PROMPTS_PATH = path.join(SCRIPT_DIR, "../data/eval/prompts.json");
+const RUNS_DIR = path.join(SCRIPT_DIR, "../data/eval/runs");
+/** After a timeout, wait at most this long for the orphaned call before starting the next prompt. */
+const ORPHAN_WAIT_MS = 60_000;
+
 /* ---------- Args ---------- */
+
+function positiveInt(flag: string, v: string): number {
+  const n = Number(v);
+  if (!Number.isInteger(n) || n <= 0) throw new Error(`${flag} must be a positive integer, got ${JSON.stringify(v)}`);
+  return n;
+}
 
 function parseArgs(argv: string[]) {
   const args = { requirementsOnly: false, only: "", limit: Infinity, timeoutMs: 0, out: "" };
@@ -65,13 +81,13 @@ function parseArgs(argv: string[]) {
     };
     if (a === "--requirements-only") args.requirementsOnly = true;
     else if (a === "--only") args.only = next().toLowerCase();
-    else if (a === "--limit") args.limit = Number(next());
-    else if (a === "--timeout-ms") args.timeoutMs = Number(next());
+    else if (a === "--limit") args.limit = positiveInt(a, next());
+    else if (a === "--timeout-ms") args.timeoutMs = positiveInt(a, next());
     else if (a === "--out") args.out = next();
     else throw new Error(`Unknown flag ${a}`);
   }
-  if (!args.timeoutMs) args.timeoutMs = args.requirementsOnly ? 30_000 : 120_000;
-  if (!args.out) args.out = path.join(os.tmpdir(), `eval-generate-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
+  if (!args.timeoutMs) args.timeoutMs = args.requirementsOnly ? 60_000 : 120_000;
+  if (!args.out) args.out = path.join(RUNS_DIR, `eval-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
   return args;
 }
 
@@ -82,7 +98,30 @@ function matches(part: Part, pattern: string): boolean {
   return part.id === pattern || part.category === pattern;
 }
 
-function scoreRequirements(c: EvalCase, req: RequirementsT): CheckResult[] {
+/** Every check this case would get, all failed with `why`. Used for errors and missing data. */
+function failedExpectations(c: EvalCase, why: string, opts: { requirements: boolean; design: boolean }): CheckResult[] {
+  const out: CheckResult[] = [];
+  const fail = (kind: CheckResult["kind"], name: string) => out.push({ kind, name, pass: false, detail: why });
+  if (opts.requirements) {
+    if (c.expect.feasible !== undefined) fail("feasible", "feasible");
+    for (const key of Object.keys(c.expect.needs ?? {})) fail("needs", key);
+  }
+  if (opts.design) {
+    for (const rule of c.expect.mustInclude ?? []) fail("include", includeName(rule));
+    for (const pattern of c.expect.mustNotInclude ?? []) fail("exclude", pattern);
+    fail("unknown-parts", "unknown-parts");
+    fail("budget", "budget");
+    fail("ok", "ok");
+  }
+  return out;
+}
+
+function includeName(rule: IncludeRule): string {
+  return rule.category ? `category:${rule.category}` : `anyOf:${(rule.anyOf ?? []).join("|")}`;
+}
+
+function scoreRequirements(c: EvalCase, req: RequirementsT | undefined): CheckResult[] {
+  if (!req) return failedExpectations(c, "no requirements returned", { requirements: true, design: false });
   const out: CheckResult[] = [];
   if (c.expect.feasible !== undefined) {
     out.push({ kind: "feasible", name: "feasible", pass: req.feasible === c.expect.feasible, detail: `got ${req.feasible}, want ${c.expect.feasible}` });
@@ -99,9 +138,11 @@ function scoreRequirements(c: EvalCase, req: RequirementsT): CheckResult[] {
 function scoreDesign(c: EvalCase, res: GenerateResult, catalog: Part[]): CheckResult[] {
   const byId = new Map(catalog.map((p) => [p.id, p]));
   const parts = res.design.partIds.map((id) => byId.get(id)).filter((p): p is Part => !!p);
+  const unknown = res.design.partIds.filter((id) => !byId.has(id));
   const out: CheckResult[] = [];
+  out.push({ kind: "unknown-parts", name: "unknown-parts", pass: unknown.length === 0, detail: unknown.length ? `unknown ids: ${unknown.join(", ")}` : "all ids in catalog" });
   for (const rule of c.expect.mustInclude ?? []) {
-    const name = rule.category ? `category:${rule.category}` : `anyOf:${(rule.anyOf ?? []).join("|")}`;
+    const name = includeName(rule);
     const pass = parts.some((p) => (rule.category ? p.category === rule.category : false) || (rule.anyOf ?? []).includes(p.id));
     out.push({ kind: "include", name, pass, detail: pass ? "present" : "missing" });
   }
@@ -116,12 +157,27 @@ function scoreDesign(c: EvalCase, res: GenerateResult, catalog: Part[]): CheckRe
 
 /* ---------- Runner ---------- */
 
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+class TimeoutError extends Error {}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Races `p` against `ms`. On timeout, waits for the orphaned promise to settle (capped at
+ * ORPHAN_WAIT_MS) before rejecting, so the next prompt never overlaps a running Gemini call.
+ */
+async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
-  const t = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms);
+  const t = new Promise<"timeout">((resolve) => {
+    timer = setTimeout(() => resolve("timeout"), ms);
   });
-  return Promise.race([p, t]).finally(() => clearTimeout(timer));
+  try {
+    const winner = await Promise.race([p.then((v) => ({ v })), t]);
+    if (winner !== "timeout") return winner.v;
+  } finally {
+    clearTimeout(timer);
+  }
+  await Promise.race([p.then(() => undefined, () => undefined), sleep(ORPHAN_WAIT_MS)]);
+  throw new TimeoutError(`timed out after ${ms} ms`);
 }
 
 async function runCase(c: EvalCase, requirementsOnly: boolean, timeoutMs: number, catalog: Part[]): Promise<CaseResult> {
@@ -144,10 +200,13 @@ async function runCase(c: EvalCase, requirementsOnly: boolean, timeoutMs: number
       attempts: res.attempts,
       failedChecks: res.derived.checks.filter((k) => !k.ok).map((k) => `${k.id}: ${k.message}`),
       limitations: res.limitations,
-      checks: [...(req ? scoreRequirements(c, req) : []), ...scoreDesign(c, res, catalog)],
+      checks: [...scoreRequirements(c, req), ...scoreDesign(c, res, catalog)],
     };
   } catch (e) {
-    return { ...base, latencyMs: Date.now() - started, error: e instanceof Error ? e.message : String(e), checks: [] };
+    const timedOut = e instanceof TimeoutError;
+    const error = e instanceof Error ? e.message : String(e);
+    const checks = failedExpectations(c, timedOut ? "not run: timeout" : `not run: ${error}`, { requirements: true, design: !requirementsOnly });
+    return { ...base, latencyMs: Date.now() - started, error, timedOut, checks };
   }
 }
 
@@ -173,8 +232,8 @@ function printTable(results: CaseResult[], requirementsOnly: boolean) {
       ok: r.ok === undefined ? "-" : r.ok ? "yes" : "no",
       att: r.attempts === undefined ? "-" : String(r.attempts),
       sec: (r.latencyMs / 1000).toFixed(1),
-      "cost/budget": r.totalUsd === undefined ? "-" : `${r.totalUsd.toFixed(0)}/${r.budgetUsd}`,
-      status: r.error ? `ERROR ${r.error.slice(0, 40)}` : r.checks.every((k) => k.pass) ? "PASS" : "fail",
+      "cost/budget": r.totalUsd === undefined ? "-" : `${r.totalUsd.toFixed(2)}/${r.budgetUsd}`,
+      status: r.timedOut ? "TIMEOUT" : r.error ? `ERROR ${r.error.slice(0, 40)}` : r.checks.every((k) => k.pass) ? "PASS" : "fail",
     };
     return cols.map((c) => cells[c]);
   });
@@ -204,6 +263,7 @@ function totals(results: CaseResult[]) {
   return {
     prompts: results.length,
     errors: results.length - ran.length,
+    timeouts: results.filter((r) => r.timedOut).length,
     fullyPassing: ran.filter((r) => r.checks.every((k) => k.pass)).length,
     checksPassed: all.filter((k) => k.pass).length,
     checksTotal: all.length,
@@ -217,7 +277,7 @@ function totals(results: CaseResult[]) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const all = JSON.parse(readFileSync(path.join(process.cwd(), "data/eval/prompts.json"), "utf8")) as EvalCase[];
+  const all = JSON.parse(readFileSync(PROMPTS_PATH, "utf8")) as EvalCase[];
   const cases = all
     .filter((c) => !args.only || c.id.toLowerCase().includes(args.only) || c.prompt.toLowerCase().includes(args.only))
     .slice(0, args.limit);
@@ -235,7 +295,7 @@ async function main() {
   console.log("");
   printTable(results, args.requirementsOnly);
   const t = totals(results);
-  console.log(`\nTotals: ${t.fullyPassing}/${t.prompts} prompts fully pass, ${t.checksPassed}/${t.checksTotal} checks pass, ${t.errors} error(s), mean ${t.meanLatencyS.toFixed(1)}s` +
+  console.log(`\nTotals: ${t.fullyPassing}/${t.prompts} prompts fully pass, ${t.checksPassed}/${t.checksTotal} checks pass, ${t.errors} error(s) (${t.timeouts} timeout), mean ${t.meanLatencyS.toFixed(1)}s` +
     (t.designs ? `, ${t.designsOk}/${t.designs} designs ok, mean ${t.meanAttempts.toFixed(2)} attempts` : ""));
   if (t.worst.length) {
     console.log("Most failed expectations:");
