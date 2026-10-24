@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Owl, Wordmark } from "./Logo";
+import { ModeSwitch, type Mode } from "./ModeSwitch";
 
 export type Tab = "robot" | "sim";
 
@@ -8,6 +9,7 @@ export function TopBar(p: {
   checksOpen: boolean; onChecks: () => void;
   failed: number; cartCount: number; onCart: () => void;
   historyOpen: boolean; onHistory: () => void;
+  mode: Mode; onMode: (m: Mode) => void;
 }) {
   return (
     <div className="topbar">
@@ -18,6 +20,7 @@ export function TopBar(p: {
           </svg>
         </button>
         <Link className="logo" href="/"><Owl size={28} /><Wordmark /></Link>
+        <ModeSwitch mode={p.mode} onMode={p.onMode} />
       </div>
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={p.tab === "robot"} className={`tab${p.tab === "robot" ? " on" : ""}`} onClick={() => p.onTab("robot")}>3D Robot</button>

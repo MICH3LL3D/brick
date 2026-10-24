@@ -1,4 +1,6 @@
 import type { Design, Part } from "./contracts";
+import { SAMPLE_MANUALS } from "./manual-sample";
+import { ManualSet, type ManualSetT } from "./manual-format";
 import { loadCatalog, loadRoom } from "./data";
 import { stubResult, type Result, type RoomT } from "./stub";
 
@@ -64,4 +66,23 @@ export function exportCsv(rows: { robot: string; part: Part; reason?: string }[]
   const lines = [["robot", "part", "category", "vendor", "price_usd", "verified", "url", "reason"].join(",")];
   for (const { robot, part: p, reason } of rows) lines.push([robot, p.name, p.category, p.vendor, p.priceUsd, p.verified, p.url, reason ?? ""].map((v) => q(v as string | number)).join(","));
   saveFile(new Blob([lines.join("\n")], { type: "text/csv" }), "buy-list.csv");
+}
+
+// Manuals: B's POST /api/manual (Gemini writes the words, code adds pins and counts) is not built yet, so this falls back to sample content.
+export async function getManuals(design: Design | null, prompt: string): Promise<ManualSetT> {
+  const raw = await post<unknown>("/api/manual", { design, task: { prompt, targetIds: [] } }, () => SAMPLE_MANUALS);
+  const ok = ManualSet.safeParse(raw);
+  return ok.success ? ok.data : SAMPLE_MANUALS;
+}
+
+/** Sprocket in the Build view. Uses POST /api/chat; says so plainly when it can't answer. */
+export async function askSprocket(messages: { role: "user" | "assistant"; content: string }[], design: Design | null, prompt: string): Promise<string> {
+  if (!design) return "Generate a robot in Design mode first, then I can help with its build.";
+  try {
+    const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages, design, task: { prompt, targetIds: [] } }) });
+    if (!res.ok) throw new Error(String(res.status));
+    return (await res.json()).reply as string;
+  } catch {
+    return "I can't reach my brain right now. Check the page's SEE tags, or try again in a moment.";
+  }
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Part } from "@/lib/contracts";
-import { downloadKit, exportCsv, generate, getCatalog, getRoom, rebudget } from "@/lib/api";
+import { downloadKit, exportCsv, generate, getCatalog, getManuals, getRoom, rebudget } from "@/lib/api";
 import { sumUsd } from "@/lib/money";
 import { STUB_CATALOG, STUB_ROOM, type Result } from "@/lib/stub";
 import { SUPPLIES } from "@/lib/supplies";
@@ -17,6 +17,9 @@ import { Viewer } from "./robot3d/Viewer";
 import { ChecksPanel } from "./ChecksPanel";
 import { SimView } from "./SimView";
 import { TopBar, type Tab } from "./TopBar";
+import { BuildView } from "./BuildView";
+import type { Mode } from "./ModeSwitch";
+import type { ManualSetT } from "@/lib/manual-format";
 
 type Robot = Result & { id: string; name: string; prompt: string; offsets: Offsets; offsets3d: Offsets; cart: string[] };
 type Undo = { robotId: string; partId: string };
@@ -48,9 +51,18 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const [note, setNote] = useState("");
   const [genError, setGenError] = useState<{ message: string; prompt: string; budget: number } | null>(null);
   const [kitBusy, setKitBusy] = useState(false);
+  const [mode, setMode] = useState<Mode>("design");
+  const [manuals, setManuals] = useState<ManualSetT | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const budgetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const started = useRef(false);
+
+  useEffect(() => {
+    if (mode !== "build" || manuals) return;
+    let live = true;
+    getManuals(robots.find((r) => r.id === currentId)?.design ?? null, prompt).then((m) => live && setManuals(m));
+    return () => { live = false; };
+  }, [mode, manuals, robots, currentId, prompt]);
 
   const current = robots.find((r) => r.id === currentId) ?? null;
   const partsOf = useCallback((ids: string[]) => ids.map((i) => catalog.find((p) => p.id === i) ?? SUPPLIES.find((p) => p.id === i)).filter((p): p is Part => !!p), [catalog]);
@@ -141,6 +153,11 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const failed = current?.derived.checks.filter((c) => !c.ok).length ?? 0;
   const arm = parts.find((p) => p.category === "arm");
 
+  // Build with no robot yet still opens the sample manuals so the shelf and legend are reachable.
+  if (mode === "build") {
+    return manuals ? <BuildView manuals={manuals} design={current?.design ?? null} prompt={prompt} onMode={setMode} /> : <div className="app" />;
+  }
+
   return (
     <div className="app">
       <div className="pop-anchor">
@@ -148,6 +165,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
           tab={tab} onTab={setTab} checksOpen={checksOpen} onChecks={() => setChecksOpen(!checksOpen)} failed={failed}
           cartCount={cartParts.length} onCart={() => setCartOpen(!cartOpen)}
           historyOpen={historyOpen} onHistory={() => setHistoryOpen(!historyOpen)}
+          mode={mode} onMode={setMode}
         />
         {limitsOpen && (
           <div className="pop" role="dialog" aria-label="Limitations" style={{ top: 56 }}>
