@@ -1,4 +1,4 @@
-# Robot Playground: Team Plan (hackathon, Sat 2026-10-24)
+# athena1: Team Plan (hackathon, Sat 2026-10-24)
 
 Source of truth for scope, ownership and timeline. Deadline **4:00 pm PT**. Track: **Best Use of Google Gemini**.
 Product detail lives in `docs/DECISIONS.md` and `docs/briefs/`. Shared types live in `src/lib/contracts.ts`.
@@ -33,7 +33,7 @@ Demo prompts: "Water my plants", "Bring my water bottle from the desk to the cou
 | Robot type | Wheeled only (2 or 4 wheels). Fixed or extendable arms. No legs, no flying. |
 | Who does what | Gemini picks parts and writes reasons. Code does all math, checks and simulation. |
 | Parts | Gemini may only return catalog part ids. Invalid ids are rejected and retried (max 2 repairs, failures shown to the user). |
-| Naming | No project name. One constant string "Robot Playground" in one place. Chatbot: Sprocket. |
+| Naming | Product name is athena1. One constant string in one place (`src/lib/brand.ts`, last character renders gold). Chatbot: Sprocket. |
 | Frontend design | Designed in **Paper** first, then built. See section 7. |
 | UI colors | Green (sage) buttons and fills always carry white/beige-white text and icons (`#FBF8F3`), never dark text. |
 | Data | JSON files. No database. |
@@ -111,11 +111,11 @@ Design in Paper before building. Frames to produce, at **1280 px wide** (judges 
 1. **Main screen**, three regions:
    - Left: prompt box, 3 example chips, budget slider ($50-$500 with dollar value), Generate button, progress text.
    - Center: tabs for 3D Robot and Simulation.
-   - Right: tabs for Buy List and Checks, chat panel below.
+   - Right: Checks panel (top bar toggle). The buy list lives in the per-robot cart drawer (parts, vendor links, prices, verified, budget bar, Download kit, Export CSV). Chat panel not yet designed.
 2. **Empty state** before the first prompt.
 3. **Loading state** with plain progress text ("Picking parts...", "Checking power...").
 4. **Failed-check state**: a failed check is plain English and never hidden.
-5. **Buy list** table with verified badge, reason, total, CSV button.
+5. **Cart drawer** (the buy list): per-robot parts with thumbnail, vendor, verified, price, listing link, subtotal, budget bar, CSV button.
 6. **Chat panel** with Sprocket: small friendly avatar, short bubbles, a note when an action changed the design.
 7. **Limitations popover**: kit untested on hardware, prices from vendor pages at scrape time, LiDAR scan is future work.
 
