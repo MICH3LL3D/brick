@@ -163,7 +163,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
             items={robots.map((r) => ({ id: r.id, name: r.name, totalUsd: r.derived.totalUsd, parts: r.design.partIds.length }))}
             currentId={currentId}
             onPick={(id) => { setCurrentId(id); setSelectedId(null); }}
-            onNew={() => { setCurrentId(null); setPrompt(""); setChecksOpen(false); }}
+            onNew={() => { setCurrentId(null); setGenError(null); setPrompt(""); setChecksOpen(false); }}
             onRename={(id, name) => patch(id, (r) => ({ ...r, name }))}
           />
         <main className="stage">

@@ -19,13 +19,15 @@ export type GenerateOutcome = { ok: true; result: Result & { task?: unknown } } 
 export async function generate(prompt: string, budgetUsd: number): Promise<GenerateOutcome> {
   let res: Response;
   try {
-    res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt, budgetUsd }) });
-  } catch {
-    return { ok: false, error: "Couldn’t reach the design service. Check that the app server is running." };
+    // The route stops repairing after ~60 s; give it headroom, then fail visibly instead of spinning.
+    res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt, budgetUsd }), signal: AbortSignal.timeout(90_000) });
+  } catch (e) {
+    const timedOut = e instanceof DOMException && e.name === "TimeoutError";
+    return { ok: false, error: timedOut ? "The design took too long. Please try again." : "Couldn’t reach the design service. Check that the app server is running." };
   }
   const body = await res.json().catch(() => null);
   if (!res.ok || !body?.design) {
-    return { ok: false, error: body?.error ?? `The design service failed (HTTP ${res.status}).` };
+    return { ok: false, error: typeof body?.error === "string" ? body.error : `The design service failed (HTTP ${res.status}).` };
   }
   return { ok: true, result: body };
 }
