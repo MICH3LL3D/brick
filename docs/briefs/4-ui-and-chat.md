@@ -1,6 +1,6 @@
 # Brief 4: App shell, UI, budget slider, chat panel
 
-Read first: docs/DECISIONS.md, src/lib/contracts.ts. Load the frontend-design skill before designing. The product is named athena1; keep the name in ONE constant (`src/lib/brand.ts`) and never hardcode it elsewhere.
+Read first: docs/DECISIONS.md, src/lib/contracts.ts. Load the frontend-design skill before designing. The product is named brick; keep the name in ONE constant (`src/lib/brand.ts`) and never hardcode it elsewhere.
 
 ## Build
 - Next.js app with one main page, three regions:

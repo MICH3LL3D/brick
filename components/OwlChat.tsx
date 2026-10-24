@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { z } from "zod";
 import type { Design, Task } from "@/lib/contracts";
 import { askOwl, type ChatActionT, type OwlMsg } from "@/lib/api";
-import { Owl } from "./Logo";
+import { Brick } from "./Logo";
 
 type Item = OwlMsg | { role: "note"; content: string };
 type TaskT = z.infer<typeof Task>;
@@ -65,28 +65,28 @@ export function OwlChat({ robotKey, design, task, onAction, right = 28 }: {
     <div className={`owl-chat${open ? " open" : ""}`} style={{ right }}>
       <button className="owl-launch" onClick={() => setOpen(true)} aria-label="Ask the owl" aria-expanded={open} tabIndex={open ? -1 : 0}>
         <span className="owl-hint"><Dots /></span>
-        <Owl size={56} blink />
+        <Brick size={56} blink />
       </button>
 
       <section className="owl-panel" role="dialog" aria-label="Owl chat" aria-hidden={!open} inert={!open}>
         <header>
-          <Owl size={32} />
-          <div><b>Owl</b><small>Ask about your design or request a small change</small></div>
+          <Brick size={32} />
+          <div><b>Brick</b><small>Ask about your design or request a small change</small></div>
           <button className="owl-x" onClick={() => setOpen(false)} aria-label="Close">×</button>
         </header>
         <div className="owl-log" aria-live="polite">
-          <div className="owl-row"><Owl size={24} /><p className="owl-bubble">{GREETING}</p></div>
+          <div className="owl-row"><Brick size={24} /><p className="owl-bubble">{GREETING}</p></div>
           {items.map((m, i) =>
             m.role === "note" ? <p key={i} className="owl-note">{m.content}</p>
             : m.role === "user" ? <p key={i} className="owl-bubble user">{m.content}</p>
-            : <div key={i} className="owl-row"><Owl size={24} /><p className="owl-bubble">{m.content}</p></div>
+            : <div key={i} className="owl-row"><Brick size={24} /><p className="owl-bubble">{m.content}</p></div>
           )}
-          {busy && <div className="owl-row"><Owl size={24} /><p className="owl-bubble" aria-label="Owl is typing"><Dots /></p></div>}
+          {busy && <div className="owl-row"><Brick size={24} /><p className="owl-bubble" aria-label="Brick is typing"><Dots /></p></div>}
           {!items.length && <div className="owl-chips">{CHIPS.map((c) => <button key={c} onClick={() => send(c)}>{c}</button>)}</div>}
           <div ref={end} />
         </div>
         <form onSubmit={(e) => { e.preventDefault(); send(text); }}>
-          <input ref={input} value={text} onChange={(e) => setText(e.target.value)} placeholder="Ask the owl" aria-label="Message the owl" />
+          <input ref={input} value={text} onChange={(e) => setText(e.target.value)} placeholder="Ask Brick" aria-label="Message Brick" />
           <button type="submit" aria-label="Send" disabled={busy || !text.trim()}>↑</button>
         </form>
         <small className="owl-foot">Answers by Gemini · may be wrong</small>

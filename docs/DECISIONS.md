@@ -1,6 +1,6 @@
 # Decisions (frozen)
 
-Deadline: 4:00 pm Sat 2026-10-24. Track: Best Use of Google Gemini. Runs locally. Product name: athena1 (one constant, `src/lib/brand.ts`).
+Deadline: 4:00 pm Sat 2026-10-24. Track: Best Use of Google Gemini. Runs locally. Product name: brick (one constant, `src/lib/brand.ts`).
 
 ## Product
 A web playground. User types any task. Gemini designs ONE wheeled robot for it, from a real parts catalog. App shows a 3D preview, a simulation in a hand-authored apartment, a buy list, a budget slider, a chatbot that explains and edits, and a downloadable build kit.

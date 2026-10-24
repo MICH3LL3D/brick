@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Owl } from "./Logo";
+import { Brick } from "./Logo";
 
 const STEPS = ["Reading your task", "Picking parts from the catalog", "Checking pins, power and reach"];
 
@@ -14,7 +14,7 @@ export function LoadingView({ prompt, progress = [] }: { prompt: string; progres
   }, []);
   return (
     <div className="center" role="status">
-      <Owl size={140} blink />
+      <Brick size={140} blink />
       <h2>Designing your robot</h2>
       <p className="muted">{prompt}</p>
       {progress.length > 0 ? (
@@ -41,7 +41,7 @@ export function LoadingView({ prompt, progress = [] }: { prompt: string; progres
 export function ErrorView({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="center" role="alert">
-      <Owl size={120} />
+      <Brick size={120} />
       <h2>Couldn’t design that robot</h2>
       <p className="muted">{message}</p>
       <button className="btn-gold" onClick={onRetry} style={{ marginTop: 16 }}>Try again</button>
@@ -52,7 +52,7 @@ export function ErrorView({ message, onRetry }: { message: string; onRetry: () =
 export function EmptyView() {
   return (
     <div className="center">
-      <Owl size={120} blink />
+      <Brick size={120} blink />
       <h2>What should your robot do?</h2>
       <p className="muted">Describe a task below, or try one of the examples.</p>
     </div>

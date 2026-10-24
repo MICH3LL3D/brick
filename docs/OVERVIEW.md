@@ -24,7 +24,7 @@ Non-technical people who want a robot for a job, and robotics hobbyists who want
 - Shopping web agents are future work.
 - No legs, no flying, no real physics engine.
 - Build kit is untested on hardware.
-- (Name settled: the product is called athena1, set in one constant in `src/lib/brand.ts`.)
+- (Name settled: the product is called brick, set in one constant in `src/lib/brand.ts`.)
 
 ## Why it is a strong Track 3 entry
 Gemini is the core, used four ways: structured generation locked to catalog ids, function-calling chat that edits the design, search-grounded catalog building, and generated assembly-manual text. Code verifies everything Gemini proposes, so outputs are buildable and checkable.

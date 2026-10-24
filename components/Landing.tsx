@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Owl, Wordmark } from "./Logo";
+import { Brick, Wordmark } from "./Logo";
 import { BudgetSlider } from "./BudgetSlider";
 
 export function Landing() {
@@ -21,12 +21,12 @@ export function Landing() {
   return (
     <div className="land">
       <header>
-        <div className="logo"><Owl size={36} /><Wordmark size={15} /></div>
+        <div className="logo"><Brick size={36} /><Wordmark size={15} /></div>
         <Link className="btn-outline" href="/playground">Open playground</Link>
       </header>
       <main>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <Owl size={64} blink />
+          <Brick size={64} blink />
           <h1>Build the robot you imagined.</h1>
           <p className="sub">No engineering experience needed.</p>
         </div>
