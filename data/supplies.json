@@ -232,5 +232,77 @@
     "caps": {},
     "mounts": [],
     "notes": "Tool/supply. Strain relief and cable management; price varies by listing."
+  },
+  {
+    "id": "sup-sandpaper",
+    "category": "misc",
+    "name": "3M Wet/Dry Sandpaper, 5 Assorted Sheets, 9 x 11 in",
+    "priceUsd": 5.16,
+    "vendor": "Michaels",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Smooth cut edges on wood or acrylic and rough up surfaces before gluing."
+  },
+  {
+    "id": "sup-glue-gun",
+    "category": "misc",
+    "name": "Gorilla Mini Hot Glue Gun",
+    "priceUsd": 12.99,
+    "vendor": "Meijer",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Quick mounting of boards, sensors and cable clips. Hot: do not touch the nozzle."
+  },
+  {
+    "id": "sup-glue-sticks",
+    "category": "misc",
+    "name": "Gorilla Mini Hot Glue Sticks, 4 in, 30 count",
+    "priceUsd": 4.57,
+    "vendor": "Walmart",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Refills for the mini glue gun."
+  },
+  {
+    "id": "sup-safety-glasses",
+    "category": "misc",
+    "name": "Uvex S4200HS Protege Clear Anti-Fog Safety Glasses",
+    "priceUsd": 7.79,
+    "vendor": "Fullsource",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Wear when cutting, drilling or soldering."
   }
 ]
