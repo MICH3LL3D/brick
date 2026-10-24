@@ -218,7 +218,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
             </>
           )}
           {!busy && current && tab === "sim" && <SimView room={room} sim={current.sim} />}
-          {!busy && current && checksOpen && <ChecksPanel derived={current.derived} onLimits={() => setLimitsOpen(!limitsOpen)} />}
+          {!busy && current && checksOpen && <ChecksPanel derived={current.derived} requirements={current.task?.requirements} limitations={current.limitations} onLimits={() => setLimitsOpen(!limitsOpen)} />}
           {undo && (
             <div className="toast" role="status">Part removed <button onClick={restorePart}>Undo</button></div>
           )}

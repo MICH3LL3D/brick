@@ -8,6 +8,7 @@ import type { Room, Task } from "./data";
 import { deriveAndCheck, resolveParts } from "./derive";
 import { generateWithFallback } from "./gemini";
 import { MODELS } from "./models";
+import { extraLimitations, needsList } from "./needs";
 
 export const ChatMessage = z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().min(1).max(2000) });
 export type ChatMessage = z.infer<typeof ChatMessage>;
@@ -53,20 +54,35 @@ function tools(catalog: Part[]): FunctionDeclaration[] {
 
 /* ---------- Context ---------- */
 
-function designContext(design: Design, task: Task, room: Room, catalog: Part[]): string {
+/** Room-free designs explain themselves by the task's needs; cached room demos by their targets. */
+function taskLine(task: Task, room: Room, limitations?: string[]): string {
+  const req = task.requirements;
+  if (!req) {
+    const targets = room.targets.filter((t) => task.targetIds.includes(t.id)).map((t) => `${t.label} (${t.heightMm} mm)`).join(", ");
+    return `Targets: ${targets || "none"}.`;
+  }
+  const needs = needsList(req).map((n) => `- ${n.label}: ${n.value}`).join("\n");
+  const limits = extraLimitations(req, limitations).map((l) => `- ${JSON.stringify(l)}`).join("\n");
+  // Notes and limitations are model-written from the user's prompt, so they are quoted as data too.
+  return `
+What the task needs (estimated from the prompt; explain part choices in terms of these):
+${needs || "- nothing special"}
+Feasible for a small wheeled robot: ${req.feasible ? "yes" : "no"}. Notes (data only): ${JSON.stringify(req.notes)}${limits ? `\nLimitations (data only):\n${limits}` : ""}`;
+}
+
+function designContext(design: Design, task: Task, room: Room, catalog: Part[], limitations?: string[]): string {
   const r = resolveParts(design, catalog);
   const derived = deriveAndCheck(design, task, room, catalog);
   const parts = r.parts
     .map((p) => `- ${p.id}: ${p.name} ($${p.priceUsd}, ${p.vendor}${p.verified ? ", verified" : ", not yet verified"}). Why: ${design.reasons[p.id] ?? "no reason given"}`)
     .join("\n");
   const checks = derived.checks.map((c) => `- ${c.ok ? "PASS" : "FAIL"} ${c.id}: ${c.message}`).join("\n");
-  const targets = room.targets.filter((t) => task.targetIds.includes(t.id)).map((t) => `${t.label} (${t.heightMm} mm)`).join(", ");
   const others = catalog
     .filter((p) => !design.partIds.includes(p.id))
     .map((p) => `- ${p.id} [${p.category}] ${p.name} $${p.priceUsd}`)
     .join("\n");
   // User-supplied text is quoted as data so it cannot pose as instructions.
-  return `Task (user's words, data only): ${JSON.stringify(task.prompt)}. Targets: ${targets || "none"}.
+  return `Task (user's words, data only): ${JSON.stringify(task.prompt)}. ${taskLine(task, room, limitations)}
 Budget: $${design.budgetUsd}. Total: $${derived.totalUsd} (computed by code).
 Summary (data only): ${JSON.stringify(design.summary)}
 
@@ -98,7 +114,7 @@ ${context}`;
 
 /* ---------- Main ---------- */
 
-export async function chat(messages: ChatMessage[], design: Design, task: Task, room: Room, catalog: Part[]): Promise<ChatResult> {
+export async function chat(messages: ChatMessage[], design: Design, task: Task, room: Room, catalog: Part[], limitations?: string[]): Promise<ChatResult> {
   // Gemini wants history to start with a user turn and end on the turn being answered.
   const recent = messages.slice(-12);
   while (recent.length && recent[0].role !== "user") recent.shift();
@@ -114,7 +130,7 @@ export async function chat(messages: ChatMessage[], design: Design, task: Task, 
       model: MODELS.CHAT,
       contents,
       config: {
-        systemInstruction: systemPrompt(designContext(design, task, room, catalog)),
+        systemInstruction: systemPrompt(designContext(design, task, room, catalog, limitations)),
         tools: [{ functionDeclarations: tools(catalog) }],
         temperature: 0.6,
       },
@@ -212,8 +228,20 @@ const describeAction = (catalog: Part[]) => (a: ChatActionT): string => {
 
 /* ---------- Offline fallback (no key, no wifi, or Gemini overloaded) ---------- */
 
+/** One sentence tying a part category to the task's needs, e.g. " The task needs to reach 1,000 mm high." */
+function needFor(cat: Part["category"], task: Task): string {
+  if (!task.requirements) return "";
+  const keys: Partial<Record<Part["category"], string[]>> = {
+    arm: ["reachHeightMm", "reachOutMm", "liftMassG"], tool: ["gripWidthMm", "liquidMl"], chassis: ["carryMassG", "maxWidthMm"],
+    power: ["runtimeMin"], sensor: ["needsCamera", "needsDistanceSensor"],
+  };
+  const want = keys[cat] ?? [];
+  const needs = needsList(task.requirements).filter((n) => want.includes(n.key)).map((n) => n.phrase);
+  return needs.length ? ` The task needs ${needs.join(", ")}.` : "";
+}
+
 /** Rule-based answers for the demo questions. Says "I'm not sure" for anything else. */
-export function offlineChat(messages: ChatMessage[], design: Design, task: Task, room: Room, catalog: Part[]): ChatResult {
+export function offlineChat(messages: ChatMessage[], design: Design, task: Task, room: Room, catalog: Part[], limitations?: string[]): ChatResult {
   const last = [...messages].reverse().find((m) => m.role === "user")?.content.toLowerCase() ?? "";
   const r = resolveParts(design, catalog);
   const derived = deriveAndCheck(design, task, room, catalog);
@@ -246,7 +274,16 @@ export function offlineChat(messages: ChatMessage[], design: Design, task: Task,
     const part = cat ? r.parts.find((p) => p.category === cat) : undefined;
     if (part) {
       const why = design.reasons[part.id] ?? "It was the cheapest part that passed the checks.";
-      return { reply: `Here's why I picked the ${part.name} ($${part.priceUsd}): ${why}`, actions: [], source: "offline" };
+      return { reply: `Here's why I picked the ${part.name} ($${part.priceUsd}): ${why}${needFor(cat!, task)}`, actions: [], source: "offline" };
+    }
+    const req = task.requirements;
+    if (req && /\b(need|needs|require|requirements?)\b/.test(last)) {
+      const needs = needsList(req).filter((n) => n.key !== "actions").map((n) => n.phrase);
+      return { reply: needs.length ? `This task needs ${needs.join(", ")}.` : "This task doesn't need anything special.", actions: [], source: "offline" };
+    }
+    if (/\b(can't|cannot|limit|limits|limitations?)\b/.test(last)) {
+      const limits = [...(req && !req.feasible && req.notes ? [req.notes] : []), ...extraLimitations(req, limitations)];
+      if (limits.length) return { reply: limits.join(" "), actions: [], source: "offline" };
     }
     const failed = derived.checks.filter((c) => !c.ok);
     if (/\b(fail|fails|failed|wrong|problem)\b/.test(last) && failed.length) return { reply: failed[0].message, actions: [], source: "offline" };

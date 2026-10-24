@@ -164,6 +164,19 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .btn-line.accent { border-color: var(--blue); color: var(--blue); }
 .btn-line:disabled { opacity: 0.5; cursor: default; }
 .note-line { font-size: 12px; color: var(--muted); padding-top: 8px; }
+/* task needs + limitations, under the checks */
+.infeasible { margin-top: 12px; background: var(--fail-bg); color: var(--fail); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; line-height: 17px; display: flex; flex-direction: column; gap: 4px; }
+.infeasible b { font-weight: 500; }
+.infeasible span { color: var(--text); }
+.needs { padding-block: 14px 4px; }
+.needs h3 { font: 400 11px/14px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.needs dl > div { display: flex; justify-content: space-between; gap: 12px; padding-block: 6px; border-bottom: 1px solid var(--border); font-size: 12.5px; line-height: 16px; }
+.needs dt { color: var(--muted); }
+.needs dd { text-align: right; }
+.needs dd.mono { font-size: 12px; }
+.needs p, .needs li { font-size: 12.5px; line-height: 17px; color: var(--muted); }
+.needs p { padding-top: 8px; }
+.needs ul { padding-left: 16px; display: flex; flex-direction: column; gap: 6px; }
 
 /* cart */
 .scrim { position: fixed; inset: 64px 0 0 0; background: rgba(11, 10, 9, 0.6); z-index: 10; animation: fade 0.2s ease; }
