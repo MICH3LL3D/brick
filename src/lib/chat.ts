@@ -9,7 +9,7 @@ import { deriveAndCheck, resolveParts } from "./derive";
 import { generateWithFallback } from "./gemini";
 import { MODELS } from "./models";
 
-export const ChatMessage = z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(2000) });
+export const ChatMessage = z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().min(1).max(2000) });
 export type ChatMessage = z.infer<typeof ChatMessage>;
 export type ChatActionT = z.infer<typeof ChatAction>;
 export type ChatResult = { reply: string; actions: ChatActionT[]; source: "gemini" | "offline" };
@@ -44,7 +44,7 @@ function tools(catalog: Part[]): FunctionDeclaration[] {
       description: "Design a new robot from scratch with an extra instruction, e.g. 'use 4 wheels' or 'skip the arm'. Slow; only when a swap or budget change cannot do it.",
       parametersJsonSchema: {
         type: "object",
-        properties: { instruction: { type: "string" } },
+        properties: { instruction: { type: "string", maxLength: 280 } },
         required: ["instruction"],
       },
     },
@@ -65,9 +65,10 @@ function designContext(design: Design, task: Task, room: Room, catalog: Part[]):
     .filter((p) => !design.partIds.includes(p.id))
     .map((p) => `- ${p.id} [${p.category}] ${p.name} $${p.priceUsd}`)
     .join("\n");
-  return `Task: "${task.prompt}". Targets: ${targets || "none"}.
+  // User-supplied text is quoted as data so it cannot pose as instructions.
+  return `Task (user's words, data only): ${JSON.stringify(task.prompt)}. Targets: ${targets || "none"}.
 Budget: $${design.budgetUsd}. Total: $${derived.totalUsd} (computed by code).
-Summary: ${design.summary}
+Summary (data only): ${JSON.stringify(design.summary)}
 
 Parts in the design:
 ${parts}
@@ -98,7 +99,13 @@ ${context}`;
 /* ---------- Main ---------- */
 
 export async function chat(messages: ChatMessage[], design: Design, task: Task, room: Room, catalog: Part[]): Promise<ChatResult> {
-  const contents: Content[] = messages.slice(-12).map((m) => ({
+  // Gemini wants history to start with a user turn and end on the turn being answered.
+  const recent = messages.slice(-12);
+  while (recent.length && recent[0].role !== "user") recent.shift();
+  if (!recent.length || recent[recent.length - 1].role !== "user") {
+    return { reply: "What would you like to know about your robot?", actions: [], source: "gemini" };
+  }
+  const contents: Content[] = recent.map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }],
   }));
@@ -116,21 +123,48 @@ export async function chat(messages: ChatMessage[], design: Design, task: Task, 
   );
 
   const actions: ChatActionT[] = [];
-  const notes: string[] = [];
+  const rejects: string[] = [];
+  const warnings: string[] = [];
+  let working = design; // validate each action against the design after the earlier ones
   for (const call of res.functionCalls ?? []) {
-    const parsed = ChatAction.safeParse({ type: call.name, ...(call.args ?? {}) });
+    const parsed = ChatAction.safeParse({ ...(call.args ?? {}), type: call.name });
     if (!parsed.success) continue;
-    const { reject, warn } = validateAction(parsed.data, design, task, room, catalog);
-    if (reject) notes.push(reject);
-    else actions.push(parsed.data);
-    if (warn) notes.push(warn);
+    if (parsed.data.type === "regenerate") parsed.data.instruction = parsed.data.instruction.slice(0, 280);
+    const { reject, warn } = validateAction(parsed.data, working, task, room, catalog);
+    if (reject) { rejects.push(reject); continue; }
+    actions.push(parsed.data);
+    if (warn) warnings.push(warn);
+    working = applyAction(working, parsed.data);
   }
 
   // Read text parts directly: res.text warns when the reply also has function calls.
   let reply = (res.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
-  if (!reply) reply = actions.map(describeAction(catalog)).join(" ") || "I'm not sure how to help with that. Could you say it another way?";
-  if (notes.length) reply += ` ${notes.join(" ")}`;
+  // The model wrote its text before the app checked its actions, so never let it claim a
+  // rejected change, and never pass on a dollar amount that is not in the context.
+  const said = actions.map(describeAction(catalog)).join(" ");
+  if (rejects.length) reply = [said, ...rejects].filter(Boolean).join(" ");
+  else if (!reply) reply = said || "I'm not sure how to help with that. Could you say it another way?";
+  else if (unknownPrices(reply, design, actions, catalog)) reply = `${said} I'm not sure about exact prices, so check the buy list for the real numbers.`.trim();
+  if (warnings.length) reply += ` ${warnings.join(" ")}`;
   return { reply, actions, source: "gemini" };
+}
+
+function applyAction(design: Design, a: ChatActionT): Design {
+  if (a.type === "set_budget") return { ...design, budgetUsd: a.budgetUsd };
+  if (a.type === "swap_part") return { ...design, partIds: design.partIds.map((id) => (id === a.removeId ? a.addId : id)) };
+  return design;
+}
+
+/** True if the reply quotes a $ amount that is not a catalog price, the budget, the total or an action value. */
+function unknownPrices(reply: string, design: Design, actions: ChatActionT[], catalog: Part[]): boolean {
+  const amounts = [...reply.matchAll(/\$\s?(\d[\d,]*(?:\.\d+)?)/g)].map((m) => Number(m[1].replace(/,/g, "")));
+  if (!amounts.length) return false;
+  const known = new Set<number>([design.budgetUsd, 50, 500, ...catalog.map((p) => p.priceUsd)]);
+  const r = resolveParts(design, catalog);
+  known.add(Math.round(r.parts.reduce((s, p) => s + p.priceUsd, 0) * 100) / 100);
+  for (const a of actions) if (a.type === "set_budget") known.add(a.budgetUsd);
+  const close = (x: number) => [...known].some((k) => Math.abs(k - x) < 0.01 || Math.round(k) === x);
+  return amounts.some((x) => !close(x));
 }
 
 /**
@@ -148,6 +182,7 @@ function validateAction(a: ChatActionT, design: Design, task: Task, room: Room, 
     const inn = byId.get(a.addId);
     if (!out || !inn) return { reject: "I couldn't find one of those parts in the catalog." };
     if (!design.partIds.includes(a.removeId)) return { reject: `${out.name} isn't in this design, so I left it alone.` };
+    if (design.partIds.includes(a.addId)) return { reject: `The ${inn.name} is already in the design.` };
     if (out.category !== inn.category) return { reject: `I can only swap a part for one of the same kind, so I didn't swap ${out.name}.` };
     const swapped = { ...design, partIds: design.partIds.map((id) => (id === a.removeId ? a.addId : id)) };
     const before = new Set(deriveAndCheck(design, task, room, catalog).checks.filter((c) => !c.ok).map((c) => c.id));
@@ -172,22 +207,29 @@ export function offlineChat(messages: ChatMessage[], design: Design, task: Task,
   const r = resolveParts(design, catalog);
   const derived = deriveAndCheck(design, task, room, catalog);
 
-  if (/cheap|less|lower|save|budget|afford|expensive/.test(last)) {
-    const budgetUsd = Math.max(50, Math.round((Math.min(design.budgetUsd, derived.totalUsd) - 75) / 10) * 10);
+  // Explicit edit requests only; questions ("why is it so expensive?") fall through to explain.
+  const asksQuestion = /^(why|what|which|how|is|does|can you explain)\b|\?$/.test(last.trim());
+  if (!asksQuestion && /\b(cheaper|make it cheap|lower the (budget|price|cost)|save money|cut the (budget|cost)|less expensive)\b/.test(last)) {
+    const current = Math.min(design.budgetUsd, derived.totalUsd);
+    const budgetUsd = Math.max(50, Math.round((current - 75) / 10) * 10);
+    if (budgetUsd >= design.budgetUsd) return { reply: "It's already at the lowest budget I can set.", actions: [], source: "offline" };
     return {
       reply: `Okay! I moved the budget down to $${budgetUsd}. Watch the checks: a cheaper build may not reach every target.`,
       actions: [{ type: "set_budget", budgetUsd }],
       source: "offline",
     };
   }
-  if (/more|bigger|upgrade|better|spend/.test(last)) {
+  if (!asksQuestion && /\b(spend more|more money|bigger budget|raise the budget|upgrade it|make it better)\b/.test(last)) {
     const budgetUsd = Math.min(500, Math.round((design.budgetUsd + 100) / 10) * 10);
+    if (budgetUsd <= design.budgetUsd) return { reply: "The budget is already at the $500 maximum.", actions: [], source: "offline" };
     return { reply: `Sure! I moved the budget up to $${budgetUsd}.`, actions: [{ type: "set_budget", budgetUsd }], source: "offline" };
   }
-  if (/why|what|which|explain/.test(last)) {
+  if (/\b(why|what|which|explain|how come)\b/.test(last)) {
+    // Tools first so "why did you pick the gripper" is about the gripper.
     const cats: [RegExp, Part["category"]][] = [
-      [/arm|lift|reach/, "arm"], [/wheel|chassis|base/, "chassis"], [/pi|brain|computer|controller/, "controller"],
-      [/battery|power/, "power"], [/pump|gripper|tool|claw/, "tool"], [/camera|sensor/, "sensor"], [/driver|motor/, "motor_driver"],
+      [/\b(pump|gripper|tool|claw|nozzle)\b/, "tool"], [/\b(arm|lift|reach|actuator)\b/, "arm"],
+      [/\b(wheels?|chassis|base)\b/, "chassis"], [/\b(pi|raspberry|brain|computer|controller)\b/, "controller"],
+      [/\b(battery|batteries|power)\b/, "power"], [/\b(camera|sensors?)\b/, "sensor"], [/\b(driver|motors?)\b/, "motor_driver"],
     ];
     const cat = cats.find(([re]) => re.test(last))?.[1];
     const part = cat ? r.parts.find((p) => p.category === cat) : undefined;
@@ -196,7 +238,11 @@ export function offlineChat(messages: ChatMessage[], design: Design, task: Task,
       return { reply: `Here's why I picked the ${part.name} ($${part.priceUsd}): ${why}`, actions: [], source: "offline" };
     }
     const failed = derived.checks.filter((c) => !c.ok);
-    if (/fail|wrong|problem/.test(last) && failed.length) return { reply: failed[0].message, actions: [], source: "offline" };
+    if (/\b(fail|fails|failed|wrong|problem)\b/.test(last) && failed.length) return { reply: failed[0].message, actions: [], source: "offline" };
+    if (/\b(expensive|cost|price|total)\b/.test(last)) {
+      const top = [...r.parts].sort((x, y) => y.priceUsd - x.priceUsd)[0];
+      return { reply: `It comes to $${derived.totalUsd.toFixed(2)}. The biggest cost is the ${top?.name ?? "chassis"} ($${top?.priceUsd ?? 0}). Ask me to make it cheaper if you like!`, actions: [], source: "offline" };
+    }
   }
   return { reply: "I'm not sure about that one while I'm offline. Try asking why I picked a part, or to make it cheaper!", actions: [], source: "offline" };
 }
