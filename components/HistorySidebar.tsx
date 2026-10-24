@@ -1,15 +1,37 @@
+"use client";
+
+import { useState } from "react";
+
 export type HistoryItem = { id: string; name: string; totalUsd: number; parts: number };
 
-export function HistorySidebar(p: { items: HistoryItem[]; currentId: string | null; onPick: (id: string) => void; onNew: () => void }) {
+export function HistorySidebar(p: { items: HistoryItem[]; currentId: string | null; onPick: (id: string) => void; onNew: () => void; onRename: (id: string, name: string) => void }) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const done = (save: boolean) => {
+    if (save && editing && draft.trim()) p.onRename(editing, draft.trim());
+    setEditing(null);
+  };
   return (
     <nav className="history" aria-label="Robot history">
       <button className="new-robot" onClick={p.onNew}><span>+</span><span>New robot</span></button>
-      {p.items.length > 0 && <h4>This session</h4>}
+      {p.items.length > 0 && <h4>Today</h4>}
       {p.items.map((r) => (
-        <button key={r.id} className={`history-item${r.id === p.currentId ? " on" : ""}`} onClick={() => p.onPick(r.id)}>
-          {r.name}
+        <div
+          key={r.id} role="button" tabIndex={0}
+          className={`history-item${r.id === p.currentId ? " on" : ""}${editing === r.id ? " editing" : ""}`}
+          onClick={() => p.onPick(r.id)}
+          onDoubleClick={() => { setEditing(r.id); setDraft(r.name); }}
+          onKeyDown={(e) => { if (e.key === "Enter" && editing !== r.id) p.onPick(r.id); }}
+        >
+          {editing === r.id ? (
+            <input
+              autoFocus maxLength={60} value={draft} aria-label="Rename robot"
+              onChange={(e) => setDraft(e.target.value)} onBlur={() => done(true)} onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => { if (e.key === "Enter") done(true); if (e.key === "Escape") done(false); }}
+            />
+          ) : r.name}
           <small><b>${r.totalUsd}</b> · {r.parts} parts</small>
-        </button>
+        </div>
       ))}
     </nav>
   );
