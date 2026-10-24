@@ -5,7 +5,7 @@ import { usd } from "@/lib/money";
 
 export type HistoryItem = { id: string; name: string; totalUsd: number; parts: number };
 
-export function HistorySidebar(p: { items: HistoryItem[]; currentId: string | null; onPick: (id: string) => void; onNew: () => void; onRename: (id: string, name: string) => void }) {
+export function HistorySidebar(p: { open: boolean; items: HistoryItem[]; currentId: string | null; onPick: (id: string) => void; onNew: () => void; onRename: (id: string, name: string) => void }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const done = (save: boolean) => {
@@ -13,7 +13,8 @@ export function HistorySidebar(p: { items: HistoryItem[]; currentId: string | nu
     setEditing(null);
   };
   return (
-    <nav className="history" aria-label="Robot history">
+    <div className={`history-wrap${p.open ? " open" : ""}`}>
+    <nav className="history" aria-label="Robot history" inert={!p.open}>
       <button className="new-robot" onClick={p.onNew}><span>+</span><span>New robot</span></button>
       {p.items.length > 0 && <h4>Today</h4>}
       {p.items.map((r) => (
@@ -35,5 +36,6 @@ export function HistorySidebar(p: { items: HistoryItem[]; currentId: string | nu
         </div>
       ))}
     </nav>
+    </div>
   );
 }
