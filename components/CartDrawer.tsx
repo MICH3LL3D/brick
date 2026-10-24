@@ -1,10 +1,6 @@
 import type { Part } from "@/lib/contracts";
+import { PartThumb } from "./PartThumb";
 import { sumUsd, usd } from "@/lib/money";
-
-const Thumb = ({ category }: { category: Part["category"] }) =>
-  category === "arm" ? <div style={{ width: 4, height: 30, borderRadius: 2, background: "var(--muted)" }} />
-  : category === "controller" ? <div style={{ width: 26, height: 20, borderRadius: 3, border: "1.5px solid var(--muted)" }} />
-  : <div style={{ width: 30, height: 16, borderRadius: 4, border: "1.5px solid var(--muted)" }} />;
 
 export function CartDrawer(p: { name: string; parts: Part[]; budgetUsd: number; onClose: () => void; onKit: () => void; onCsv: () => void; busy: boolean; note: string }) {
   const sub = sumUsd(p.parts.map((x) => x.priceUsd));
@@ -24,7 +20,7 @@ export function CartDrawer(p: { name: string; parts: Part[]; budgetUsd: number; 
           <div className="items">
             {p.parts.map((x) => (
               <div className="item-row" key={x.id}>
-                <div className="thumb"><Thumb category={x.category} /></div>
+                <div className="thumb"><PartThumb part={x} /></div>
                 <div className="info">
                   <b>{x.name}</b>
                   <small>{x.vendor} · {x.verified ? "Verified" : "Unverified"}</small>

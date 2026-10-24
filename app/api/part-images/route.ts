@@ -15,6 +15,9 @@ const Body = z.object({
 
 let running = 0; // shortcut: per-process cap instead of a per-IP limit; add real rate limiting before this is public.
 
+// GET -> cached photos only, no Gemini call (cart thumbnails).
+export const GET = () => Response.json(readImages());
+
 export async function POST(request: Request) {
   const body = Body.safeParse(await request.json().catch(() => null));
   if (!body.success) return Response.json({ error: "Send { partIds, labels? }." }, { status: 400 });
