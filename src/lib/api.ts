@@ -1,5 +1,6 @@
 import type { Design, Part } from "./contracts";
-import { STUB_CATALOG, STUB_ROOM, stubResult, type Result, type RoomT } from "./stub";
+import { loadCatalog, loadRoom } from "./data";
+import { stubResult, type Result, type RoomT } from "./stub";
 
 // shortcut: each call falls back to stub data when the route is missing or fails; drop the fallbacks once /api is live.
 async function post<T>(url: string, body: unknown, fallback: () => T): Promise<T> {
@@ -12,24 +13,15 @@ async function post<T>(url: string, body: unknown, fallback: () => T): Promise<T
   }
 }
 
-async function get<T>(url: string, fallback: T): Promise<T> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(String(res.status));
-    return await res.json();
-  } catch {
-    return fallback;
-  }
-}
-
 export const generate = (prompt: string, budgetUsd: number) =>
   post<Result & { task?: unknown }>("/api/generate", { prompt, budgetUsd }, () => stubResult(budgetUsd));
 
 export const rebudget = (design: Design, budgetUsd: number) =>
   post<Result>("/api/rebudget", { design, budgetUsd }, () => stubResult(budgetUsd));
 
-export const getCatalog = () => get<Part[]>("/api/catalog", STUB_CATALOG);
-export const getRoom = () => get<RoomT>("/api/room", STUB_ROOM);
+// Catalog and room are static JSON, so read them directly; the stub copies used different part ids.
+export const getCatalog = async (): Promise<Part[]> => loadCatalog();
+export const getRoom = async (): Promise<RoomT> => loadRoom() as RoomT;
 
 export function saveFile(blob: Blob, name: string) {
   const a = document.createElement("a");

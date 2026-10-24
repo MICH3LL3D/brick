@@ -1,0 +1,236 @@
+[
+  {
+    "id": "sup-jumpers",
+    "category": "misc",
+    "name": "Premium Male/Male Jumper Wires - 40 x 6\" (150mm)",
+    "priceUsd": 3.95,
+    "vendor": "Adafruit",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply, not part of the robot. For wiring the Pi to driver and sensors."
+  },
+  {
+    "id": "sup-screwdrivers",
+    "category": "misc",
+    "name": "Precision screwdriver set (6 pieces)",
+    "priceUsd": 7.95,
+    "vendor": "Adafruit",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Phillips and flat drivers for the small screws on boards and servos."
+  },
+  {
+    "id": "sup-pliers",
+    "category": "misc",
+    "name": "Simple needlenose pliers",
+    "priceUsd": 3.0,
+    "vendor": "Adafruit",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Bending leads, holding small nuts."
+  },
+  {
+    "id": "sup-cutters",
+    "category": "misc",
+    "name": "Flush diagonal cutters - CHP170",
+    "priceUsd": 7.25,
+    "vendor": "Adafruit",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Trimming wire leads and zip ties."
+  },
+  {
+    "id": "sup-strippers",
+    "category": "misc",
+    "name": "Multi-size wire stripper & cutter - 5023",
+    "priceUsd": 6.95,
+    "vendor": "Adafruit",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. 20-30 AWG; struggles with 30 AWG."
+  },
+  {
+    "id": "sup-iron",
+    "category": "misc",
+    "name": "Adjustable 60W Pen-Style Soldering Iron - 120VAC USA Plug - BEST 102C",
+    "priceUsd": 19.95,
+    "vendor": "Adafruit",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Needed for headers, battery leads and motor wires."
+  },
+  {
+    "id": "sup-solder",
+    "category": "misc",
+    "name": "Mini Solder spool - 60/40 lead rosin-core solder 0.3mm diameter - 100g",
+    "priceUsd": 14.95,
+    "vendor": "Adafruit",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Contains lead; ventilate."
+  },
+  {
+    "id": "sup-standoffs",
+    "category": "misc",
+    "name": "Black Nylon Machine Screw and Stand-off Set (M2.5)",
+    "priceUsd": 16.95,
+    "vendor": "Adafruit",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Mounts the Pi and boards to the deck. Price from a cached listing."
+  },
+  {
+    "id": "sup-hookup-wire",
+    "category": "misc",
+    "name": "Hook-up Wire Spool Set - 22AWG Solid Core (10 x 25ft)",
+    "priceUsd": 29.95,
+    "vendor": "Adafruit",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Power and motor wiring that jumpers cannot reach."
+  },
+  {
+    "id": "sup-microsd",
+    "category": "misc",
+    "name": "SanDisk microSD Card with Pi OS 64-bit - 32GB",
+    "priceUsd": 19.95,
+    "vendor": "PiShop",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. The Pi has no storage without one. Preloaded with Raspberry Pi OS."
+  },
+  {
+    "id": "sup-psu",
+    "category": "misc",
+    "name": "Official Raspberry Pi 27W PD Power Supply 5.1V 5A with USB C",
+    "priceUsd": 14.04,
+    "vendor": "Adafruit",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Wall power for setup and programming; works with Pi 4 and Pi 5."
+  },
+  {
+    "id": "sup-multimeter",
+    "category": "misc",
+    "name": "Digital Multimeter - Basic",
+    "priceUsd": 21.5,
+    "vendor": "SparkFun",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Check battery voltage, continuity and shorts before powering the Pi."
+  },
+  {
+    "id": "sup-zipties",
+    "category": "misc",
+    "name": "K Tool International 4 in. Black Nylon Wire Tie (100-Pack)",
+    "priceUsd": 4.95,
+    "vendor": "Home Depot",
+    "url": "",
+    "verified": false,
+    "dims": {
+      "l": 0,
+      "w": 0,
+      "h": 0
+    },
+    "massG": 0,
+    "caps": {},
+    "mounts": [],
+    "notes": "Tool/supply. Strain relief and cable management; price varies by listing."
+  }
+]

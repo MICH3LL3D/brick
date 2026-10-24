@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Part } from "@/lib/contracts";
 import { downloadKit, exportCsv, generate, getCatalog, getRoom, rebudget } from "@/lib/api";
 import { STUB_CATALOG, STUB_ROOM, type Result } from "@/lib/stub";
+import { SUPPLIES } from "@/lib/supplies";
 import { CartDrawer } from "./CartDrawer";
 import { HistorySidebar } from "./HistorySidebar";
 import { ALL_LAYERS, LayersPanel, type Layers } from "./LayersPanel";
@@ -50,7 +51,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const started = useRef(false);
 
   const current = robots.find((r) => r.id === currentId) ?? null;
-  const partsOf = useCallback((ids: string[]) => ids.map((i) => catalog.find((p) => p.id === i)).filter((p): p is Part => !!p), [catalog]);
+  const partsOf = useCallback((ids: string[]) => ids.map((i) => catalog.find((p) => p.id === i) ?? SUPPLIES.find((p) => p.id === i)).filter((p): p is Part => !!p), [catalog]);
   const parts = useMemo(() => (current ? partsOf(current.design.partIds) : []), [current, partsOf]);
   const totalOf = (ids: string[]) => partsOf(ids).reduce((s, p) => s + p.priceUsd, 0);
 
@@ -62,7 +63,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
     setCurrentId(null);
     const res = await generate(text, b);
     const id = crypto.randomUUID();
-    setRobots((rs) => [...rs, { ...res, id, name: titleOf(text), prompt: text, offsets: {}, offsets3d: {}, cart: res.design.partIds }]);
+    setRobots((rs) => [...rs, { ...res, id, name: titleOf(text), prompt: text, offsets: {}, offsets3d: {}, cart: [...res.design.partIds, ...SUPPLIES.map((x) => x.id)] }]);
     setCurrentId(id);
     setBusy(false);
   }, []);
@@ -83,7 +84,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
     const { id, design } = current;
     budgetTimer.current = setTimeout(async () => {
       const res = await rebudget(design, v);
-      patch(id, (r) => ({ ...r, ...res, cart: res.design.partIds }));
+      patch(id, (r) => ({ ...r, ...res, cart: [...res.design.partIds, ...SUPPLIES.map((x) => x.id)] }));
     }, 150);
   };
 
@@ -122,7 +123,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const kit = async () => {
     if (!current) return;
     setKitBusy(true);
-    const ok = await downloadKit({ ...current.design, partIds: current.cart }, current.name);
+    const ok = await downloadKit({ ...current.design, partIds: current.cart.filter((i) => !SUPPLIES.some((x) => x.id === i)) }, current.name);
     setKitBusy(false);
     setNote(ok ? "" : "Build kit isn’t available yet. Try again once the kit service is running.");
   };
@@ -194,7 +195,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
           {undo && (
             <div className="toast" role="status">Part removed <button onClick={restorePart}>Undo</button></div>
           )}
-          <PromptBar prompt={prompt} onPrompt={setPrompt} budget={budget} onBudget={onBudget} busy={busy} onGenerate={() => run(prompt, budget)} />
+          <PromptBar prompt={prompt} onPrompt={setPrompt} budget={budget} onBudget={onBudget} busy={busy} hasRobot={!!current} onGenerate={() => run(prompt, budget)} />
         </main>
       </div>
 
