@@ -4,15 +4,9 @@ import { ModeSwitch, type Mode } from "./ModeSwitch";
 
 export type Tab = "robot" | "sim";
 
-export function TopBar(p: {
-  tab: Tab; onTab: (t: Tab) => void;
-  checksOpen: boolean; onChecks: () => void;
-  failed: number; cartCount: number; onCart: () => void;
-  historyOpen: boolean; onHistory: () => void;
-  mode: Mode; onMode: (m: Mode) => void; canBuild: boolean;
-}) {
+// Left cluster shared by Design and Build so the header never shifts between modes.
+export function BrandSide(p: { historyOpen: boolean; onHistory: () => void; mode: Mode; onMode: (m: Mode) => void; canBuild: boolean }) {
   return (
-    <div className="topbar">
       <div className="side">
         <button className={`icon-btn${p.historyOpen ? " on" : ""}`} onClick={p.onHistory} aria-label="Toggle robot history" aria-pressed={p.historyOpen}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#1A1714" strokeWidth="1.5">
@@ -22,6 +16,19 @@ export function TopBar(p: {
         <Link className="logo" href="/"><Brick size={28} /><Wordmark /></Link>
         <ModeSwitch mode={p.mode} onMode={p.onMode} canBuild={p.canBuild} />
       </div>
+  );
+}
+
+export function TopBar(p: {
+  tab: Tab; onTab: (t: Tab) => void;
+  checksOpen: boolean; onChecks: () => void;
+  failed: number; cartCount: number; onCart: () => void;
+  historyOpen: boolean; onHistory: () => void;
+  mode: Mode; onMode: (m: Mode) => void; canBuild: boolean;
+}) {
+  return (
+    <div className="topbar">
+      <BrandSide historyOpen={p.historyOpen} onHistory={p.onHistory} mode={p.mode} onMode={p.onMode} canBuild={p.canBuild} />
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={p.tab === "robot"} className={`tab${p.tab === "robot" ? " on" : ""}`} onClick={() => p.onTab("robot")}>3D Robot</button>
         <button role="tab" aria-selected={p.tab === "sim"} className={`tab${p.tab === "sim" ? " on" : ""}`} onClick={() => p.onTab("sim")}>Simulation</button>

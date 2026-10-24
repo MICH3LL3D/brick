@@ -17,7 +17,7 @@ import { PromptBar } from "./PromptBar";
 import { Viewer } from "./robot3d/Viewer";
 import { ChecksPanel } from "./ChecksPanel";
 import { SimView } from "./SimView";
-import { TopBar, type Tab } from "./TopBar";
+import { BrandSide, TopBar, type Tab } from "./TopBar";
 import { BuildView } from "./BuildView";
 import { OwlChat } from "./OwlChat";
 import type { Mode } from "./ModeSwitch";
@@ -207,10 +207,18 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const arm = parts.find((p) => p.category === "arm");
 
   if (mode === "build") {
-    if (manuals) return <BuildView manuals={manuals} status={manualStatus} design={current?.design ?? null} prompt={prompt} onMode={setMode} />;
-    if (!current) return <div className="app"><EmptyView message="Design a robot first, then its manuals appear here." /><button className="btn-gold" onClick={() => setMode("design")}>Back to design</button></div>;
-    if (manualFailed) return <div className="app"><ErrorView message="The manuals didn’t come back." onRetry={() => { manualsFor.current = null; setManualTry((n) => n + 1); }} /></div>;
-    return <div className="app"><LoadingView title="Writing your manuals" prompt={current.design.summary} progress={manualStatus ? [manualStatus] : []} /></div>;
+    const openHistory = () => { setMode("design"); setHistoryOpen(true); };
+    if (manuals) return <BuildView manuals={manuals} status={manualStatus} design={current?.design ?? null} prompt={prompt} onMode={setMode} onHistory={openHistory} />;
+    // Waiting states keep the build header so Design stays one click away.
+    const wait = (view: React.ReactNode) => (
+      <div className="build">
+        <header className="topbar b-top"><BrandSide historyOpen={false} onHistory={openHistory} mode="build" onMode={setMode} canBuild={!!current} /></header>
+        <div className="app" style={{ height: "auto", flex: 1, minHeight: 0 }}>{view}</div>
+      </div>
+    );
+    if (!current) return wait(<EmptyView message="Design a robot first, then its manuals appear here." />);
+    if (manualFailed) return wait(<ErrorView message="The manuals didn’t come back." onRetry={() => { manualsFor.current = null; setManualTry((n) => n + 1); }} />);
+    return wait(<LoadingView title="Writing your manuals" prompt={current.design.summary} progress={manualStatus ? [manualStatus] : []} />);
   }
 
   return (
