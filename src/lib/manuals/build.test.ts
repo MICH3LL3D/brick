@@ -33,4 +33,5 @@ test("every slot id is unique and short names keep a short first half", () => {
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(shortName({ ...catalog[0], name: "Pirate - 4WD Mobile Platform" }), "Pirate - 4WD Mobile Platform");
   assert.equal(shortName({ ...catalog[0], name: "Raspberry Pi 4 Model B - 4 GB RAM" }), "Raspberry Pi 4 Model B");
+  assert.equal(shortName({ ...catalog[0], name: "5V, 3A Step-Down Voltage Regulator D36V28F5" }), "5V, 3A Step-Down Voltage Regulator");
 });

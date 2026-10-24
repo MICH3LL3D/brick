@@ -39,8 +39,11 @@ export const Art = z.discriminatedUnion("kind", [
 /** One slot in the parts box at the top of a page: exactly what this page needs. */
 export const PartsBoxItem = z.object({ qty: z.number().int().min(1), label: z.string().max(40), art: Art.optional() });
 
+/** One end of a wire, for the drawn diagram. `pin` is the physical Pi header pin (1 to 40) when the end is on the header. */
+export const WireEnd = z.object({ dev: z.string().max(40), port: z.string().max(30), pin: z.number().int().min(1).max(40).optional() });
 /** One wire. Code fills pins from the checked pin map; Gemini must not invent them. isNew wires glow, older ones fade. */
-export const Wire = z.object({ color: WireColor, from: z.string(), to: z.string(), isNew: z.boolean().default(true) });
+export const Wire = z.object({ color: WireColor, from: z.string(), to: z.string(), isNew: z.boolean().default(true), a: WireEnd.optional(), b: WireEnd.optional() });
+export type WireT = z.infer<typeof Wire>;
 
 export const Panel = z.object({ title: z.string().max(40), art: Art.optional(), caption: z.string().max(200).optional() });
 

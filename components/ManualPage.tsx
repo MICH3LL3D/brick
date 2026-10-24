@@ -1,4 +1,5 @@
 import { bookMeta, BOOKS, type ManualPageT } from "@/lib/manual-format";
+import { WiringDiagram } from "./WiringDiagram";
 
 const WIRE: Record<string, string> = { red: "#D94F41", black: "#222B26", orange: "#E8813A", blue: "#4179C7", yellow: "#E4B73A", white: "#FFFFFF", green: "#3E9E63", purple: "#865BB4", brown: "#774A28", grey: "#A9A9A0" };
 
@@ -50,15 +51,19 @@ export function ManualPage({ page, total, onOpen }: { page: ManualPageT; total: 
 
       {page.kind === "wiring" && (
         <>
-          {page.photo ? <ArtBox art={{ kind: "photo", src: page.photo.src, credit: page.photo.credit }} label="Raspberry Pi 5" /> : <div className="m-art tall">Board and wire diagram</div>}
+          {page.wires.some((w) => w.a && w.b) ? <WiringDiagram wires={page.wires} /> : (
+            <>
+              {page.photo ? <ArtBox art={{ kind: "photo", src: page.photo.src, credit: page.photo.credit }} label="Board" /> : <div className="m-art tall">Board and wire diagram</div>}
+              <ul className="m-wires">
+                {page.wires.map((w) => (
+                  <li key={`${w.from}${w.to}`} style={{ opacity: w.isNew ? 1 : 0.45 }}>
+                    <i style={{ background: WIRE[w.color], borderColor: w.color === "white" ? "#222B26" : WIRE[w.color] }} />{w.from} → {w.to}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           {page.gauge && <div className="m-gauge"><b>{page.gauge.reading}</b><span>{page.gauge.expect}</span></div>}
-          <ul className="m-wires">
-            {page.wires.map((w) => (
-              <li key={`${w.from}${w.to}`} style={{ opacity: w.isNew ? 1 : 0.45 }}>
-                <i style={{ background: WIRE[w.color], borderColor: w.color === "white" ? "#222B26" : WIRE[w.color] }} />{w.from} → {w.to}
-              </li>
-            ))}
-          </ul>
         </>
       )}
 

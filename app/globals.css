@@ -296,6 +296,24 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .m-art, .m-photo { width: 100%; aspect-ratio: 4 / 3; border-radius: 8px; background: #EFE9DD; display: grid; place-items: center; color: #8a8f88; font-size: 12px; object-fit: cover; }
 .m-art.tall { aspect-ratio: 16 / 9; }
 .mpage > .m-photo { max-height: 220px; aspect-ratio: auto; object-fit: contain; }
+.wd { display: grid; gap: 14px; }
+.wd-need { display: flex; flex-wrap: wrap; gap: 18px; border: 2px solid #222B26; border-radius: 12px; padding: 8px 16px; width: fit-content; max-width: 100%; }
+.wd-need > div { display: grid; justify-items: center; font-size: 12px; color: #5b625d; }
+.wd-need b { font: 600 15px var(--sans); color: #222B26; }
+.wd-svg { width: 100%; height: auto; max-height: 520px; background: #F4EFE4; border-radius: 10px; }
+.wd-svg text { font-family: var(--sans); fill: #222B26; }
+.wd-title { font-size: 15px; font-weight: 600; }
+.wd-port { font-size: 11px; fill: #5b625d !important; }
+.wd-pin { font: 600 11px var(--mono); }
+.wd-steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
+.wd-steps li button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: 0; border-radius: 8px; padding: 6px 8px; color: #222B26; font-size: 13px; cursor: pointer; }
+.wd-steps li.now button { background: #EFE9DD; }
+.wd-steps li.later button { opacity: 0.45; }
+.wd-steps i { font-style: normal; flex: 0 0 22px; height: 22px; border-radius: 11px; background: #222B26; color: #FBF8F3; display: grid; place-items: center; font: 600 11px var(--mono); }
+.wd-dot { flex: 0 0 12px; height: 12px; border-radius: 6px; border: 1.5px solid; }
+.wd-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: #5b625d; }
+.wd-nav button { background: #222B26; color: #FBF8F3; border: 0; border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+.wd-nav button:disabled { opacity: 0.35; cursor: default; }
 .m-credit { color: #8a8f88; font: 400 11px var(--mono); }
 .m-gauge { display: flex; gap: 12px; align-items: baseline; }
 .m-gauge b { font: 600 28px var(--mono); }
