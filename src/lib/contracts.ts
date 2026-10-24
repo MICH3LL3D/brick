@@ -43,6 +43,10 @@ export const Part = z.object({
     drawW: z.number().optional(),                 // average draw, any consumer
     pins: z.number().int().optional(),            // pins this part needs on the Pi (0 if via a board)
     interface: z.enum(["gpio", "pwm", "i2c", "usb", "csi", "none"]).optional(),
+    stallA: z.number().optional(),                // motors/actuators: worst-case current; the driver channel must supply it
+    speedMmS: z.number().optional(),              // linear arms: stroke speed under load, for open-loop timing
+    servoCount: z.number().int().optional(),      // pwm parts: number of servo channels used
+    feedback: z.enum(["none", "pot", "hall"]).optional(), // linear arms: position feedback (pot needs an ADC)
   }),
   mounts: z.array(z.string()).default([]),        // slot names it can occupy: "deck", "front", "tool_mount", ...
   notes: z.string().default(""),                  // wiring gotchas, 3.3V logic, separate motor supply, etc.
