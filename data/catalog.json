@@ -385,17 +385,17 @@
     "dims": {
       "l": 60,
       "w": 45,
-      "h": 356
+      "h": 399
     },
-    "massG": 1100,
+    "massG": 1390,
     "caps": {
       "reachMm": {
         "min": 60,
         "max": 160
       },
-      "liftMaxMm": 606,
+      "liftMaxMm": 649,
       "armPayloadG": 2000,
-      "drawW": 6,
+      "drawW": 12,
       "pins": 0,
       "interface": "gpio",
       "stallA": 7,
@@ -405,7 +405,7 @@
     "mounts": [
       "deck"
     ],
-    "notes": "Extendable arm: mount vertically as a lift mast, about 356 mm retracted plus 250 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: power it from 3.3V and read the wiper through an ADS1115, not a Pi pin. Reach range assumes a small servo wrist on top (estimate). Pololu: 12.3 mm/s at max load, about 1 A no load, 7 A stall at 12V."
+    "notes": "Extendable arm: mount vertically as a lift mast, 399 mm retracted plus 250 mm usable stroke (Pololu; 1.39 kg). 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: power it from 3.3V and read the wiper through an ADS1115, not a Pi pin. Reach range assumes a small servo wrist on top (estimate). Pololu: 12.3 mm/s at max load, about 1 A no load (drawW 12 W), 7 A stall at 12V."
   },
   {
     "id": "arm-lact12p",
@@ -418,17 +418,17 @@
     "dims": {
       "l": 60,
       "w": 45,
-      "h": 394
+      "h": 450
     },
-    "massG": 1200,
+    "massG": 1460,
     "caps": {
       "reachMm": {
         "min": 60,
         "max": 180
       },
-      "liftMaxMm": 694,
+      "liftMaxMm": 750,
       "armPayloadG": 2000,
-      "drawW": 6,
+      "drawW": 12,
       "pins": 0,
       "interface": "gpio",
       "stallA": 7,
@@ -438,7 +438,7 @@
     "mounts": [
       "deck"
     ],
-    "notes": "Extendable arm: mount vertically as a lift mast, about 394 mm retracted plus 300 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: power it from 3.3V and read the wiper through an ADS1115. Reach range assumes a small servo wrist on top (estimate). Pololu: 12.3 mm/s at max load, about 1 A no load, 7 A stall at 12V."
+    "notes": "Extendable arm: mount vertically as a lift mast, 450 mm retracted, 750 mm extended (Pololu; 1.46 kg). 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: power it from 3.3V and read the wiper through an ADS1115. Reach range assumes a small servo wrist on top (estimate). Pololu: 12.3 mm/s at max load, about 1 A no load (drawW 12 W), 7 A stall at 12V."
   },
   {
     "id": "arm-lact4p",
@@ -451,7 +451,7 @@
     "dims": {
       "l": 50,
       "w": 35,
-      "h": 210
+      "h": 240
     },
     "massG": 600,
     "caps": {
@@ -459,9 +459,9 @@
         "min": 60,
         "max": 140
       },
-      "liftMaxMm": 312,
+      "liftMaxMm": 340,
       "armPayloadG": 1500,
-      "drawW": 5,
+      "drawW": 12,
       "pins": 0,
       "interface": "gpio",
       "stallA": 7,
@@ -471,7 +471,7 @@
     "mounts": [
       "deck"
     ],
-    "notes": "Extendable arm: about 210 mm retracted plus 100 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Analog feedback: power the pot from 3.3V and read it via ADS1115. Pololu: 16 mm/s max (0.6 in/s), about 1 A no load, 3 A at max load, 7 A stall at 12V; 10k pot."
+    "notes": "Extendable arm: 240 mm retracted, 340 mm extended (Pololu). 12V DC motor: needs one motor driver channel and a 12V supply. Analog feedback: power the pot from 3.3V and read it via ADS1115. Pololu: 16 mm/s max (0.6 in/s), about 1 A no load (drawW 12 W), 3 A at max load, 7 A stall at 12V; 10k pot."
   },
   {
     "id": "tool-gripper",
