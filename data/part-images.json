@@ -1,0 +1,47 @@
+{
+  "md-motor-hat": {
+    "credit": "Photo: Adafruit",
+    "page": "https://www.adafruit.com/product/2348",
+    "src": "/part-images/md-motor-hat.jpg"
+  },
+  "pi4b-4gb": {
+    "credit": "Photo: Adafruit",
+    "page": "https://www.adafruit.com/product/4296",
+    "src": "/part-images/pi4b-4gb.jpg"
+  },
+  "tool-pump-submersible": {
+    "credit": "Photo: Adafruit",
+    "page": "https://www.adafruit.com/product/4546",
+    "src": "/part-images/tool-pump-submersible.jpg"
+  },
+  "tank-500": {
+    "credit": "Photo: Nalgene",
+    "page": "https://nalgene.com/product/16oz-wide-mouth-sustain/",
+    "src": "/part-images/tank-500.jpg"
+  },
+  "chassis-4wd-m": {
+    "credit": "Photo: DFRobot",
+    "page": "https://www.dfrobot.com/product-97.html",
+    "src": "/part-images/chassis-4wd-m.jpg"
+  },
+  "arm-lact10p": {
+    "credit": "Photo: Pololu",
+    "page": "https://www.pololu.com/product/2311",
+    "src": "/part-images/arm-lact10p.jpg"
+  },
+  "bat-nimh-2200": {
+    "credit": "Photo: Pololu",
+    "page": "https://www.pololu.com/product/2225",
+    "src": "/part-images/bat-nimh-2200.jpg"
+  },
+  "reg-5v-3a": {
+    "credit": "Photo: Pololu",
+    "page": "https://www.pololu.com/product/3782",
+    "src": "/part-images/reg-5v-3a.jpg"
+  },
+  "bat-nimh-900": {
+    "credit": "Photo: Pololu",
+    "page": "https://www.pololu.com/product/2235",
+    "src": "/part-images/bat-nimh-900.jpg"
+  }
+}
