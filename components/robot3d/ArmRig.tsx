@@ -232,8 +232,8 @@ export function ArmControls({ extend, onExtend, rig }: { extend: number; onExten
       role="group"
       aria-label="Arm controls"
       style={{
-        position: "absolute", left: 12, bottom: 12, zIndex: 1,
-        display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+        // position (clear of the prompt bar) comes from .arm-controls in globals.css
+        gap: 10, flexWrap: "wrap",
         maxWidth: "calc(100% - 24px)", padding: "8px 10px",
         background: "rgba(21, 20, 18, 0.88)", border: "1px solid #2A2724", borderRadius: 8,
         color: C.ink, font: "12px/1.2 system-ui, sans-serif", backdropFilter: "blur(6px)",
