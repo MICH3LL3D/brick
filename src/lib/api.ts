@@ -1,4 +1,5 @@
-import type { Design, Part } from "./contracts";
+import type { z } from "zod";
+import type { ChatAction, Design, Part, Task } from "./contracts";
 import { SAMPLE_MANUALS } from "./manual-sample";
 import { ManualSet, type ManualSetT } from "./manual-format";
 import { loadCatalog, loadRoom } from "./data";
@@ -131,5 +132,21 @@ export async function askSprocket(messages: { role: "user" | "assistant"; conten
     return (await res.json()).reply as string;
   } catch {
     return "I can't reach my brain right now. Check the page's SEE tags, or try again in a moment.";
+  }
+}
+
+export type ChatActionT = z.infer<typeof ChatAction>;
+export type OwlMsg = { role: "user" | "assistant"; content: string };
+type TaskT = z.infer<typeof Task>;
+
+/** Owl on the robot page. Same POST /api/chat, but returns the actions too. Never throws. */
+export async function askOwl(messages: OwlMsg[], design: Design, task: TaskT): Promise<{ reply: string; actions: ChatActionT[]; source: "gemini" | "offline" }> {
+  try {
+    const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages, design, task }) });
+    if (!res.ok) throw new Error(String(res.status));
+    const body = await res.json();
+    return { reply: String(body.reply ?? ""), actions: Array.isArray(body.actions) ? body.actions : [], source: body.source === "gemini" ? "gemini" : "offline" };
+  } catch {
+    return { reply: "I can't reach my brain right now. Try again in a moment.", actions: [], source: "offline" };
   }
 }

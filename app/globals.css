@@ -339,3 +339,48 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 }
 @media (prefers-reduced-motion: reduce) { .b-list, .chat, .bar i { transition: none; } }
 .orbit-hint { position: absolute; right: 28px; top: 24px; width: 150px; text-align: right; color: var(--muted); font: 400 11px/16px var(--mono); pointer-events: none; }
+
+/* owl chat */
+.owl-chat { position: absolute; bottom: 120px; width: 0; height: 0; z-index: 4; }
+.owl-launch { position: absolute; right: 0; bottom: 0; width: 64px; height: 64px; display: grid; place-items: center; border-radius: 32px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease; }
+.owl-launch:hover { transform: translateY(-2px) scale(1.04); }
+.owl-launch:active { transform: scale(0.96); }
+.owl-hint { position: absolute; right: 52px; bottom: 50px; padding: 7px 10px; background: var(--panel-hi); border: 1px solid var(--border); border-radius: 12px 12px 4px 12px; display: flex; }
+.owl-chat.open .owl-launch { opacity: 0; transform: scale(0.6); pointer-events: none; }
+.owl-dots { display: inline-flex; gap: 4px; align-items: center; height: 10px; }
+.owl-dots i { width: 5px; height: 5px; border-radius: 3px; background: var(--muted); animation: owl-dot 1.2s ease-in-out infinite; }
+.owl-dots i:nth-child(2) { animation-delay: 0.15s; }
+.owl-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes owl-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-3px); opacity: 1; } }
+
+.owl-panel { position: absolute; right: 0; bottom: 0; width: min(360px, calc(100vw - 32px)); height: min(520px, calc(100vh - 200px)); background: var(--panel); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45); display: flex; flex-direction: column; overflow: hidden; transform-origin: bottom right; opacity: 0; transform: scale(0.4) translateY(12px); pointer-events: none; transition: transform 0.42s cubic-bezier(0.32, 1.25, 0.5, 1), opacity 0.2s ease; }
+.owl-chat.open .owl-panel { opacity: 1; transform: none; pointer-events: auto; }
+.owl-panel header { display: flex; gap: 10px; align-items: center; padding: 12px 12px 12px 16px; border-bottom: 1px solid var(--border); }
+.owl-panel header div { flex: 1; min-width: 0; }
+.owl-panel header small { display: block; color: var(--muted); font-size: 12px; }
+.owl-x { width: 30px; height: 30px; border-radius: 8px; font-size: 20px; line-height: 1; color: var(--muted); }
+.owl-x:hover { background: var(--panel-hi); color: var(--text); }
+.owl-log { flex: 1; overflow: auto; padding: 14px 14px 8px; display: flex; flex-direction: column; gap: 10px; }
+.owl-row { display: flex; gap: 8px; align-items: flex-end; max-width: 88%; }
+.owl-row svg { flex-shrink: 0; }
+.owl-bubble { position: relative; padding: 8px 12px; border-radius: 14px; line-height: 1.45; background: var(--panel-hi); white-space: pre-wrap; overflow-wrap: anywhere; animation: owl-in 0.25s ease; }
+.owl-row .owl-bubble { border-bottom-left-radius: 4px; }
+.owl-row .owl-bubble::before { content: ""; position: absolute; left: -5px; bottom: 0; border: 6px solid transparent; border-right-color: var(--panel-hi); border-bottom-color: var(--panel-hi); border-left: 0; }
+.owl-bubble.user { align-self: flex-end; max-width: 80%; background: var(--blue); color: #FBF8F3; border-bottom-right-radius: 4px; }
+.owl-bubble.user::after { content: ""; position: absolute; right: -5px; bottom: 0; border: 6px solid transparent; border-left-color: var(--blue); border-bottom-color: var(--blue); border-right: 0; }
+.owl-note { align-self: center; font-size: 12px; color: var(--gold); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; animation: owl-in 0.25s ease; }
+.owl-chips { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 32px; }
+.owl-chips button { border: 1px solid var(--border); border-radius: 999px; padding: 5px 11px; font-size: 12.5px; color: var(--muted); }
+.owl-chips button:hover { border-color: var(--gold); color: var(--text); }
+.owl-panel form { display: flex; gap: 6px; padding: 10px 12px 6px; border-top: 1px solid var(--border); }
+.owl-panel input { flex: 1; min-width: 0; height: 38px; padding-inline: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); outline: 0; }
+.owl-panel input:focus { border-color: var(--blue); }
+.owl-panel form button { width: 38px; border-radius: 10px; background: var(--gold); color: var(--on-gold); font-weight: 600; }
+.owl-panel form button:disabled { opacity: 0.4; cursor: default; }
+.owl-foot { padding: 0 12px 10px; color: var(--muted); font-size: 11px; text-align: center; }
+@keyframes owl-in { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) {
+  .owl-dots i { animation: none; opacity: 0.8; }
+  .owl-panel, .owl-launch { transition: opacity 0.15s ease !important; }
+  .owl-panel { transform: none; }
+}
