@@ -4,12 +4,16 @@
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
 import { useEffect, useMemo, useState } from "react";
+import * as THREE from "three";
 import { layoutRobot, type Vec3 } from "@/lib/robot3d/layout";
 import { ArmControls, ArmRig } from "./ArmRig";
 import { Selectable, Wiring, type DeckBounds } from "./Interaction";
 import { ChassisMesh, PartMesh, WheelMesh } from "./PartMesh";
 import { C } from "./theme";
 import type { SceneProps } from "./types";
+
+// Look a bit below the middle so the robot sits above the prompt bar instead of behind it.
+const LOOK_AT = 0.4;
 
 /** Re-frames the camera whenever the robot changes size (the Canvas camera prop is only read once). */
 function CameraFit({ bounds }: { bounds: Vec3 }) {
@@ -19,7 +23,7 @@ function CameraFit({ bounds }: { bounds: Vec3 }) {
   useEffect(() => {
     const span = Math.max(bx, by, bz, 0.2);
     camera.position.set(span * 0.95, span * 0.7, span * 0.95);
-    controls?.target.set(0, by / 2, 0);
+    controls?.target.set(0, by * LOOK_AT, 0);
     controls?.update();
   }, [camera, controls, bx, by, bz]);
   return null;
@@ -90,9 +94,15 @@ export function RobotScene(p: SceneProps) {
         {!layout.arm && toolNode}
 
         <Wiring layout={layout} visible={p.layers.wiring} offsets={p.offsets} />
-        <OrbitControls makeDefault target={[0, layout.bounds[1] / 2, 0]} minDistance={0.15} maxDistance={4} />
+        <OrbitControls
+          makeDefault target={[0, layout.bounds[1] * LOOK_AT, 0]} minDistance={0.15} maxDistance={4}
+          enablePan screenSpacePanning panSpeed={1.2}
+          mouseButtons={{ LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }}
+          touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
+        />
         <CameraFit bounds={layout.bounds} />
       </Canvas>
+      <small className="orbit-hint">Drag to turn · right-drag or two fingers to move up and down · scroll to zoom</small>
       {layout.arm && <ArmControls extend={extend} onExtend={setExtend} rig={layout.arm} />}
     </div>
   );

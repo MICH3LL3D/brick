@@ -337,3 +337,4 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
   .b-view { padding-bottom: 80px; }
 }
 @media (prefers-reduced-motion: reduce) { .b-list, .chat, .bar i { transition: none; } }
+.orbit-hint { position: absolute; right: 28px; top: 24px; width: 150px; text-align: right; color: var(--muted); font: 400 11px/16px var(--mono); pointer-events: none; }
