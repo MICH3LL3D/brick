@@ -12,7 +12,7 @@ import { SprocketChat } from "./SprocketChat";
 type Pos = { book: BookIdT; page: number };
 const KEY = `${BRAND}-manual-done`;
 
-export function BuildView({ manuals, design, prompt, onMode }: { manuals: ManualSetT; design: Design | null; prompt: string; onMode: (m: Mode) => void }) {
+export function BuildView({ manuals, status = "", design, prompt, onMode }: { manuals: ManualSetT; status?: string; design: Design | null; prompt: string; onMode: (m: Mode) => void }) {
   const [pos, setPos] = useState<Pos>({ book: "0", page: 1 });
   const [from, setFrom] = useState<Pos | null>(null); // where a SEE tag was opened from
   // BuildView only mounts client-side (after the mode switch), so localStorage is safe in the initialiser.
@@ -88,7 +88,8 @@ export function BuildView({ manuals, design, prompt, onMode }: { manuals: Manual
           )}
           {inSkill && <h2 className="b-title">Skills · {page.title}</h2>}
           {!inSkill && page.warning && <div className="b-warn">▲ {page.warning}</div>}
-          {manuals.source === "sample" && <div className="b-warn">Sample manual, not built from your robot. The build kit is untested on hardware.</div>}
+          {status && <div className="b-note" role="status" aria-live="polite">{status}</div>}
+          {manuals.source === "sample" && !status && <div className="b-warn">Sample manual, not built from your robot. The build kit is untested on hardware.</div>}
           <ManualPage page={page} total={book.pages.length} onOpen={open} />
           <div className="b-actions">
             {inSkill ? (

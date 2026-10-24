@@ -26,7 +26,7 @@ const tryJson = (text: string | undefined): unknown => {
   }
 };
 
-async function ask<T>(schema: z.ZodType<T>, jsonSchema: object, system: string, user: string): Promise<T> {
+export async function ask<T>(schema: z.ZodType<T>, jsonSchema: object, system: string, user: string): Promise<T> {
   const res = await generateWithFallback(
     {
       model: MODELS.GENERATE,

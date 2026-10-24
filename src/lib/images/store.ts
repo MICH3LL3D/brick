@@ -12,9 +12,11 @@ const EXT: Record<string, string> = { "image/jpeg": ".jpg", "image/png": ".png",
 
 export const imageExt = (mime: string) => EXT[mime];
 
+/** Only entries whose file is on disk, so a stale index never produces a broken image. */
 export function readImages(): Record<string, PartImage> {
   try {
-    return JSON.parse(fs.readFileSync(INDEX, "utf8"));
+    const all: Record<string, PartImage> = JSON.parse(fs.readFileSync(INDEX, "utf8"));
+    return Object.fromEntries(Object.entries(all).filter(([, v]) => fs.existsSync(path.join(DIR, path.basename(v.src)))));
   } catch {
     return {};
   }
@@ -26,6 +28,6 @@ export function saveImage(partId: string, mime: string, bytes: Buffer, rec: Omit
   const name = `${partId}${EXT[mime]}`;
   fs.writeFileSync(path.join(DIR, name), bytes);
   const saved = { ...rec, src: `/part-images/${name}` };
-  fs.writeFileSync(INDEX, JSON.stringify({ ...readImages(), [partId]: saved }, null, 2) + "\n");
+  fs.writeFileSync(INDEX, JSON.stringify({ ...readImages(), [partId]: saved }, null, 2) + "\n"); // drops index entries whose file is gone
   return saved;
 }

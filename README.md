@@ -13,7 +13,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 The loading screen shows what each agent is doing. Set `AGENTS=single` to use the old single-call designer, `DEMO_MODE=1` for cached results.
 
-Build manuals get real product photos from photo agents (vendor page, Google Search, Gemini vision check). Photos are cached in `public/part-images/`.
+Build manuals are written for the robot (`POST /api/manual`): code lays out the pages, wires and parts from the checked pin map, Gemini writer agents (one per book) write the words, a fact-checker agent reviews them, and photo agents (vendor page, Google Search, Gemini vision check) find real product photos, cached in `public/part-images/`.
 
 ## Getting Started
 

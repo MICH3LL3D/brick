@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Part } from "@/lib/contracts";
-import { attachPartImages, downloadKit, exportCsv, generate, getCatalog, getManuals, getRoom, rebudget } from "@/lib/api";
+import { downloadKit, exportCsv, generate, getCatalog, getManuals, getRoom, rebudget } from "@/lib/api";
 import { sumUsd } from "@/lib/money";
 import { STUB_CATALOG, STUB_ROOM, type Result } from "@/lib/stub";
 import { SUPPLIES } from "@/lib/supplies";
@@ -17,6 +17,7 @@ import { ChecksPanel } from "./ChecksPanel";
 import { SimView } from "./SimView";
 import { TopBar, type Tab } from "./TopBar";
 import { BuildView } from "./BuildView";
+import { SAMPLE_MANUALS } from "@/lib/manual-sample";
 import type { Mode } from "./ModeSwitch";
 import type { ManualSetT } from "@/lib/manual-format";
 
@@ -52,22 +53,27 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const [kitBusy, setKitBusy] = useState(false);
   const [mode, setMode] = useState<Mode>("design");
   const [manuals, setManuals] = useState<ManualSetT | null>(null);
+  const [manualStatus, setManualStatus] = useState("");
+  const manualsFor = useRef<string | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const budgetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const started = useRef(false);
 
+  // Build opens the sample manuals at once, then swaps in the ones Gemini writes for this robot.
   useEffect(() => {
-    if (mode !== "build" || manuals) return;
-    let live = true;
+    if (mode !== "build") return;
+    const key = currentId ?? "none";
+    if (manualsFor.current === key) return;
+    manualsFor.current = key;
     const design = robots.find((r) => r.id === currentId)?.design ?? null;
-    getManuals(design, prompt).then((m) => {
-      if (!live) return;
-      setManuals(m);
-      // setManuals(m) re-runs this effect and clears `live`, so the photo step checks the title instead.
-      attachPartImages(m, design).then((withPhotos) => setManuals((cur) => (cur?.title === withPhotos.title ? withPhotos : cur)));
+    setManuals(SAMPLE_MANUALS);
+    if (!design) return;
+    setManualStatus("Writing your manuals…");
+    getManuals(design, prompt, setManualStatus).then((m) => {
+      if (manualsFor.current === key) setManuals(m);
+      setManualStatus("");
     });
-    return () => { live = false; };
-  }, [mode, manuals, robots, currentId, prompt]);
+  }, [mode, robots, currentId, prompt]);
 
   const current = robots.find((r) => r.id === currentId) ?? null;
   const partsOf = useCallback((ids: string[]) => ids.map((i) => catalog.find((p) => p.id === i) ?? SUPPLIES.find((p) => p.id === i)).filter((p): p is Part => !!p), [catalog]);
@@ -161,7 +167,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
 
   // Build with no robot yet still opens the sample manuals so the shelf and legend are reachable.
   if (mode === "build") {
-    return manuals ? <BuildView manuals={manuals} design={current?.design ?? null} prompt={prompt} onMode={setMode} /> : <div className="app" />;
+    return manuals ? <BuildView manuals={manuals} status={manualStatus} design={current?.design ?? null} prompt={prompt} onMode={setMode} /> : <div className="app" />;
   }
 
   return (

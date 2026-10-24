@@ -30,27 +30,35 @@ export async function generate(prompt: string, budgetUsd: number, onProgress?: (
     const body = await res.json().catch(() => null);
     return { ok: false, error: typeof body?.error === "string" ? body.error : `The design service failed (HTTP ${res.status}).` };
   }
-  // NDJSON: {"progress"} lines, then one {"result"} or {"error"} line.
-  let out: GenerateOutcome = { ok: false, error: "The design service ended without an answer." };
+  let msg: { result?: unknown; error?: string };
+  try {
+    msg = await readNdjson(res, onProgress);
+  } catch (e) {
+    return { ok: false, error: timeoutOr(e, "The connection dropped while designing. Please try again.") };
+  }
+  const result = msg.result as { design?: unknown } | undefined;
+  if (result?.design) return { ok: true, result: result as never };
+  return { ok: false, error: msg.error ?? "The design service ended without an answer." };
+}
+
+/** NDJSON from /api/generate and /api/manual: {"progress"} lines, then one {"result"} or {"error"} line. */
+async function readNdjson(res: Response, onProgress?: (text: string) => void): Promise<{ result?: unknown; error?: string }> {
+  const out: { result?: unknown; error?: string } = {};
   const read = (line: string) => {
     if (!line.trim()) return;
     const msg = JSON.parse(line);
     if (typeof msg.progress === "string") onProgress?.(msg.progress);
-    else if (msg.result?.design) out = { ok: true, result: msg.result };
-    else if (typeof msg.error === "string") out = { ok: false, error: msg.error };
+    else if (msg.result) out.result = msg.result;
+    else if (typeof msg.error === "string") out.error = msg.error;
   };
-  try {
-    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
-    let buf = "";
-    for (let r = await reader.read(); !r.done; r = await reader.read()) {
-      const parts = (buf + r.value).split("\n");
-      buf = parts.pop() ?? "";
-      parts.forEach(read);
-    }
-    read(buf);
-  } catch (e) {
-    return { ok: false, error: timeoutOr(e, "The connection dropped while designing. Please try again.") };
+  const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = "";
+  for (let r = await reader.read(); !r.done; r = await reader.read()) {
+    const parts = (buf + r.value).split("\n");
+    buf = parts.pop() ?? "";
+    parts.forEach(read);
   }
+  read(buf);
   return out;
 }
 
@@ -91,34 +99,20 @@ export function exportCsv(rows: { robot: string; part: Part; reason?: string }[]
   saveFile(new Blob([lines.join("\n")], { type: "text/csv" }), "buy-list.csv");
 }
 
-// Manuals: B's POST /api/manual (Gemini writes the words, code adds pins and counts) is not built yet, so this falls back to sample content.
-export async function getManuals(design: Design | null, prompt: string): Promise<ManualSetT> {
-  const raw = await post<unknown>("/api/manual", { design, task: { prompt, targetIds: [] } }, () => SAMPLE_MANUALS);
-  const ok = ManualSet.safeParse(raw);
-  return ok.success ? ok.data : SAMPLE_MANUALS;
-}
-
-type Photo = { src: string; credit: string };
-
 /**
- * Fills empty art slots in the parts boxes with verified product photos (POST /api/part-images).
- * Slow the first time (agents search and check), instant after. Any failure returns the set unchanged.
+ * POST /api/manual (Gemini writer agents + code for pins and counts + photo agents). Streams progress lines while it works.
+ * Without a design, or if the route fails or has no Gemini key, the sample manuals are returned so the viewer still works.
  */
-export async function attachPartImages(set: ManualSetT, design: Design | null): Promise<ManualSetT> {
-  if (!design) return set;
-  const labels = new Set<string>();
-  for (const b of set.books) for (const pg of b.pages) for (const it of [...pg.parts, ...(pg.kind === "parts" ? pg.items : [])]) if (!it.art) labels.add(it.label);
+export async function getManuals(design: Design | null, prompt: string, onProgress?: (text: string) => void): Promise<ManualSetT> {
+  if (!design) return SAMPLE_MANUALS;
   try {
-    const res = await fetch("/api/part-images", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ partIds: [...new Set(design.partIds)], labels: [...labels] }), signal: AbortSignal.timeout(120_000) });
-    if (!res.ok) return set;
-    const { images, labels: map } = (await res.json()) as { images: Record<string, Photo>; labels: Record<string, string> };
-    const fill = <T extends { label: string; art?: unknown }>(it: T): T => {
-      const img = images[map[it.label]];
-      return it.art || !img ? it : { ...it, art: { kind: "photo" as const, src: img.src, credit: img.credit } };
-    };
-    return { ...set, books: set.books.map((b) => ({ ...b, pages: b.pages.map((pg) => ({ ...pg, parts: pg.parts.map(fill), ...(pg.kind === "parts" ? { items: pg.items.map(fill) } : {}) })) })) } as ManualSetT;
+    const res = await fetch("/api/manual", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ design, task: { prompt, targetIds: [] }, stream: true }), signal: AbortSignal.timeout(180_000) });
+    if (!res.ok || !res.body) return SAMPLE_MANUALS;
+    const { result } = await readNdjson(res, onProgress);
+    const ok = ManualSet.safeParse(result);
+    return ok.success ? ok.data : SAMPLE_MANUALS;
   } catch {
-    return set;
+    return SAMPLE_MANUALS;
   }
 }
 
