@@ -58,7 +58,9 @@ Page counts come from the design: a robot with no arm gets no arm book content. 
 - **Fact-checker agent** compares every sentence with the catalog data and rewrites unsupported ones.
 - **Photo agents** (brief 8) find and verify product photos for the design's parts. Parts with no verified photo keep the grey placeholder.
 - If one writer fails, its pages fall back to plain text from the slot hints. If the whole route fails, the sample set is shown.
-- Not done: wire diagrams drawn over board photos (the wiring page shows a part photo plus the wire list), pin-1 markers, per-step diagrams.
+- **Wire diagrams** (`components/WiringDiagram.tsx`, from the Paper pages "04 Driver signals" and "05 Battery power"): a "wires needed" strip, the devices with labelled ports on the left, the Pi's 40-pin header on the right (drawn by code, pin 1 marked, used pins numbered), curved coloured wires, and one numbered step per wire ("Connect Pi pin 11 (GPIO17) to Ultrasonic Distance Sensor TRIG with the orange wire."). The stepper starts with every wire shown; Next wire draws one at a time, the current wire glows and earlier ones fade. Wires carry structured ends (`a`, `b` with a physical `pin`), taken from `derive.pinMap` and the BCM-to-pin table in `src/lib/pi-header.ts`, so Gemini never places a wire. Pages without structured ends (the sample set) fall back to the plain wire list.
+- The diagram draws the Pi header itself instead of a photo of the board, so wire ends are exact. Motor leads to the driver are not drawn (driver terminals differ by board).
+- Not done: pin-1 marker on a board photo, per-step diagrams for non-wiring pages.
 
 ## Not built yet
 

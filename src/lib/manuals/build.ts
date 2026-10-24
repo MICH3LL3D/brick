@@ -12,10 +12,12 @@ import { catalogLines } from "../generate";
 import { findPartImages } from "../images/agents";
 import type { PartImage } from "../images/store";
 import { labelPins } from "../kit/wiring";
+import { boardPinOf } from "../pi-header";
 import { BOOKS, ManualSet, type BookIdT, type ManualPageT, type ManualSetT } from "../manual-format";
 
 type Say = (text: string) => void;
-type Wire = { color: "red" | "black" | "orange" | "blue" | "yellow" | "white" | "green" | "purple" | "brown" | "grey"; from: string; to: string; isNew: boolean };
+type End = { dev: string; port: string; pin?: number };
+type Wire = { color: "red" | "black" | "orange" | "blue" | "yellow" | "white" | "green" | "purple" | "brown" | "grey"; from: string; to: string; isNew: boolean; a?: End; b?: End };
 type Slot = { id: string; kind: "steps" | "wiring" | "fix" | "skill" | "shelf" | "parts" | "legend"; title: string; hint: string; panels: number; wires?: Wire[]; gauge?: { reading: string; expect: string } };
 type Plan = { id: BookIdT; goal: string; partIds: string[]; slots: Slot[] };
 
@@ -24,9 +26,12 @@ const COLORS: Wire["color"][] = ["orange", "blue", "yellow", "green", "purple", 
 const bookName = (id: BookIdT) => BOOKS.find((b) => b.id === id)!.name;
 /** "Raspberry Pi 4 Model B - 4 GB RAM" -> "Raspberry Pi 4 Model B": the label that fits a parts box. */
 export const shortName = (p: Part) => {
-  const head = p.name.split(/, | \(| for /)[0];
-  const [left] = head.split(" - ");
-  return clip(left.length >= 12 ? left : head, 40); // "Pirate - 4WD Mobile Platform" keeps its second half
+  let name = p.name.split(/ \(| for /)[0];
+  for (const sep of [" - ", ", "]) {
+    const left = name.split(sep)[0];
+    if (left.length >= 12) name = left; // "Pirate - 4WD Mobile Platform" and "5V, 3A Step-Down Regulator" keep their second half
+  }
+  return name.length > 40 ? clip(name.slice(0, 40).replace(/\s+\S*$/, ""), 40) : clip(name, 40); // cut at a word, not mid-word
 };
 
 const SKILLS: Slot[] = [
@@ -52,17 +57,26 @@ export function planBooks(design: Design, derived: Derived, catalog: Part[]): Pl
       const p = catalog.find((c) => c.id === m.partId);
       if (!p || !match(p)) return [];
       return labelPins(p, m.pins).map((l, i) => {
-        const [pin, role] = l.split(" = ");
-        return { color: COLORS[i % COLORS.length], from: `Pi ${pin}`, to: to(p, role), isNew: true };
+        const [pin, named] = l.split(" = ");
+        const role = named ?? /\((\w+)\)/.exec(pin)?.[1]; // I2C pins carry their role in brackets, e.g. "GPIO2 (SDA)"
+        const header = boardPinOf(pin);
+        return { color: COLORS[i % COLORS.length], from: `Pi ${pin}`, to: to(p, role), isNew: true, ...(header ? { a: { dev: "Raspberry Pi", port: clip(pin.replace(/\s*\(.*\)/, ""), 30), pin: header }, b: { dev: shortName(p), port: clip(role, 30) } } : {}) };
       });
     });
 
   const powerWires: Wire[] = [];
-  if (usb) powerWires.push({ color: "grey", from: `${shortName(usb)} USB-C`, to: "Pi USB-C port", isNew: true });
+  const PI = "Raspberry Pi";
+  const w = (color: Wire["color"], a: End, b: End): Wire => ({ color, from: `${a.dev} ${a.port}`, to: `${b.dev} ${b.port}`, isNew: true, a, b });
+  if (usb) powerWires.push(w("grey", { dev: shortName(usb), port: "USB-C" }, { dev: PI, port: "USB-C" }));
   if (main && main !== usb) {
-    const sink = regulator ? `${shortName(regulator)} IN` : drivers[0] ? `${shortName(drivers[0])} motor power` : "load";
-    powerWires.push({ color: "red", from: `${shortName(main)} +`, to: `${sink}+`, isNew: true }, { color: "black", from: `${shortName(main)} -`, to: `${sink}-`, isNew: true });
-    if (regulator && !usb) powerWires.push({ color: "red", from: `${shortName(regulator)} OUT+`, to: "Pi pin 2 (5V)", isNew: true }, { color: "black", from: `${shortName(regulator)} OUT-`, to: "Pi pin 6 (GND)", isNew: true });
+    const m = shortName(main);
+    const hub = regulator ? shortName(regulator) : drivers[0] ? shortName(drivers[0]) : undefined;
+    if (hub) powerWires.push(w("red", { dev: m, port: "+" }, { dev: hub, port: regulator ? "IN+" : "motor power +" }), w("black", { dev: m, port: "-" }, { dev: hub, port: regulator ? "IN-" : "motor power -" }));
+    if (regulator && !usb) {
+      const r = shortName(regulator);
+      powerWires.push(w("red", { dev: r, port: "OUT+" }, { dev: PI, port: "5V", pin: 2 }), w("black", { dev: r, port: "OUT-" }, { dev: PI, port: "GND", pin: 6 }));
+    }
+    if (regulator) for (const d of drivers) powerWires.push(w("red", { dev: m, port: "+" }, { dev: shortName(d), port: "motor power +" }), w("black", { dev: m, port: "-" }, { dev: shortName(d), port: "motor power -" }));
   }
 
   const power: Slot[] = [{ id: "3.1", kind: "wiring", title: "Wire the power", hint: "Battery to the regulator and motor driver; battery stays unplugged until the Switch on book.", panels: 0, wires: powerWires }];

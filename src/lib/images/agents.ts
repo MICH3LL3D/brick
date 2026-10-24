@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { Part } from "../contracts";
 import { generateWithFallback, getGemini, geminiTimeout, parseJsonText } from "../gemini";
 import { MODELS } from "../models";
+import { sizeOk } from "./size";
 import { imageExt, readImages, saveImage, type PartImage } from "./store";
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36";
@@ -87,7 +88,7 @@ async function download(url: string): Promise<{ bytes: Buffer; mime: string } | 
   const mime = res?.headers.get("content-type")?.split(";")[0].trim() ?? "";
   if (!res || !imageExt(mime)) return null;
   const bytes = await readCapped(res, MAX_BYTES);
-  return bytes && bytes.length > 2_000 ? { bytes, mime } : null;
+  return bytes && bytes.length > 2_000 && sizeOk(bytes, mime) ? { bytes, mime } : null; // too small or oddly shaped: skip before asking the verifier
 }
 
 const Verdict = z.object({ matches: z.boolean(), reason: z.string() });
