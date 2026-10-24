@@ -1,8 +1,8 @@
 "use client";
 // Picks the 3D scene or the 2D schematic. three.js loads only on the client, only when WebGL works,
-// and any runtime error inside the scene drops back to 2D.
+// and a runtime error or lost WebGL context inside the scene drops back to 2D for that robot.
 import dynamic from "next/dynamic";
-import { Component, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Component, useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { RobotPreview } from "../RobotPreview";
 import type { Offsets, SceneProps } from "./types";
 
@@ -43,31 +43,50 @@ type Props = Omit<SceneProps, "offsets" | "onMove"> & {
 export function Viewer(p: Props) {
   const supported = useSyncExternalStore(noop, hasWebGL, () => null);
   const [mode, setMode] = useState<"3d" | "2d">("3d");
-  const [crashed, setCrashed] = useState(false);
+  // A crash only disables 3D for the parts list it happened on; a new robot gets a fresh try.
+  const sig = p.parts.map((x) => x.id).join(",");
+  const [crashedSig, setCrashedSig] = useState<string | null>(null);
+  const crashed = crashedSig === sig;
   const can3d = supported === true && !crashed;
   const show3d = can3d && mode === "3d";
+  const box = useRef<HTMLDivElement>(null);
+  const noteId = useId();
+
+  // webglcontextlost doesn't bubble, but a capture listener on an ancestor still sees it.
+  useEffect(() => {
+    const el = box.current;
+    if (!el || !show3d) return;
+    const lost = () => setCrashedSig(sig);
+    el.addEventListener("webglcontextlost", lost, true);
+    return () => el.removeEventListener("webglcontextlost", lost, true);
+  }, [show3d, sig]);
 
   const flat = (
     <RobotPreview parts={p.parts} layers={p.layers} selectedId={p.selectedId} offsets={p.offsets2d} onSelect={p.onSelect} onMove={p.onMove2d} />
   );
 
   return (
-    <div className="viewer">
+    <div className="viewer" ref={box}>
       {supported !== null && (
         <div className="view-toggle" role="group" aria-label="Viewer">
-          {(["3d", "2d"] as const).map((m) => (
-            <button
-              key={m} type="button" aria-pressed={(m === "3d") === show3d} className={(m === "3d") === show3d ? "on" : ""}
-              disabled={m === "3d" && !can3d} title={m === "3d" && !can3d ? "3D isn’t available in this browser" : undefined}
-              onClick={() => setMode(m)}
-            >
-              {m.toUpperCase()}
-            </button>
-          ))}
+          {(["3d", "2d"] as const).map((m) => {
+            const off = m === "3d" && !can3d;
+            const on = (m === "3d") === show3d;
+            return (
+              <button
+                key={m} type="button" aria-pressed={on} className={on ? "on" : ""}
+                aria-disabled={off || undefined} aria-describedby={off ? noteId : undefined}
+                onClick={() => { if (!off) setMode(m); }}
+              >
+                {m.toUpperCase()}
+              </button>
+            );
+          })}
         </div>
       )}
+      {supported !== null && !can3d && <p id={noteId} className="viewer-note" role="status">3D view unavailable — showing 2D</p>}
       {supported === null ? null : show3d ? (
-        <Fallback fallback={flat} onError={() => setCrashed(true)}>
+        <Fallback key={sig} fallback={flat} onError={() => setCrashedSig(sig)}>
           <RobotScene parts={p.parts} layers={p.layers} selectedId={p.selectedId} offsets={p.offsets3d} onSelect={p.onSelect} onMove={p.onMove3d} />
         </Fallback>
       ) : flat}
