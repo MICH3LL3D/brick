@@ -43,6 +43,10 @@ export const Part = z.object({
     drawW: z.number().optional(),                 // average draw, any consumer
     pins: z.number().int().optional(),            // pins this part needs on the Pi (0 if via a board)
     interface: z.enum(["gpio", "pwm", "i2c", "usb", "csi", "none"]).optional(),
+    stallA: z.number().optional(),                // motors/actuators: worst-case current; the driver channel must supply it
+    speedMmS: z.number().optional(),              // linear arms: stroke speed under load, for open-loop timing
+    servoCount: z.number().int().optional(),      // pwm parts: number of servo channels used
+    feedback: z.enum(["none", "pot", "hall"]).optional(), // linear arms: position feedback (pot needs an ADC)
   }),
   mounts: z.array(z.string()).default([]),        // slot names it can occupy: "deck", "front", "tool_mount", ...
   notes: z.string().default(""),                  // wiring gotchas, 3.3V logic, separate motor supply, etc.
@@ -88,8 +92,8 @@ export const Room = z.object({
 /** What the task physically needs, estimated by Gemini from the prompt alone (no room). All 0/false = not needed. */
 export const Requirements = z.object({
   feasible: z.boolean(),                                // can a small wheeled robot do this at all?
-  notes: z.string(),                                    // honest limitations, plain English
-  actions: z.array(z.string()),                         // short verbs: "pick up", "carry", "water", "photograph"...
+  notes: z.string().max(600),                           // honest limitations, plain English
+  actions: z.array(z.string().max(60)).max(12),         // short verbs: "pick up", "carry", "water", "photograph"...
   reachHeightMm: z.number().min(0),                     // highest point the tool must reach, above the floor
   reachOutMm: z.number().min(0),                        // how far past the robot's front the tool must reach
   gripWidthMm: z.number().min(0),                       // object width the gripper must open to
