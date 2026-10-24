@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { Design } from "@/lib/contracts";
 import { bookMeta, type BookIdT, type ManualSetT } from "@/lib/manual-format";
 import { BRAND } from "@/lib/brand";
@@ -12,7 +12,7 @@ import { BrandSide } from "./TopBar";
 type Pos = { book: BookIdT; page: number };
 const KEY = `${BRAND}-manual-done`;
 
-export function BuildView({ manuals, status = "", design, prompt, onMode, onHistory }: { manuals: ManualSetT; status?: string; design: Design | null; prompt: string; onMode: (m: Mode) => void; onHistory: () => void }) {
+export function BuildView({ manuals, pending, status = "", design, prompt, onMode, onHistory }: { manuals: ManualSetT | null; pending?: ReactNode; status?: string; design: Design | null; prompt: string; onMode: (m: Mode) => void; onHistory: () => void }) {
   const [pos, setPos] = useState<Pos>({ book: "0", page: 1 });
   const [from, setFrom] = useState<Pos | null>(null); // where a SEE tag was opened from
   // BuildView only mounts client-side (after the mode switch), so localStorage is safe in the initialiser.
@@ -23,12 +23,26 @@ export function BuildView({ manuals, status = "", design, prompt, onMode, onHist
 
   const mark = (s: Set<string>) => { setDone(s); try { localStorage.setItem(KEY, JSON.stringify([...s])); } catch { /* ignore */ } };
 
-  const book = manuals.books.find((b) => b.id === pos.book)!;
-  const page = book.pages[pos.page - 1];
-  const all = useMemo(() => manuals.books.flatMap((b) => b.pages.map((p) => `${b.id}.${p.page}`)), [manuals]);
+  const book = manuals?.books.find((b) => b.id === pos.book);
+  const page = book?.pages[pos.page - 1];
+  const all = useMemo(() => (manuals ?? { books: [] }).books.flatMap((b) => b.pages.map((p) => `${b.id}.${p.page}`)), [manuals]);
   const doneCount = all.filter((k) => done.has(k)).length;
   const meta = bookMeta(pos.book);
   const where = `Book ${pos.book}, page ${pos.page}`;
+
+  // Manuals still loading (or failed): same page, with the status in the reading pane.
+  if (!manuals || !book || !page) {
+    return (
+      <div className="build">
+        <header className="topbar b-top"><BrandSide historyOpen={false} onHistory={onHistory} mode="build" onMode={onMode} canBuild={!!design} /></header>
+        <div className="b-body">
+          <nav className="b-list" aria-label="Manuals"><h4>MANUALS</h4></nav>
+          <main className="b-view">{pending}</main>
+          <SprocketChat where="Manuals" design={design} prompt={prompt} />
+        </div>
+      </div>
+    );
+  }
 
   const open = (b: BookIdT, p: number) => {
     if (b === "S" && pos.book !== "S") setFrom(pos);

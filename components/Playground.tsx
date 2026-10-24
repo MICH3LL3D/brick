@@ -17,7 +17,7 @@ import { PromptBar } from "./PromptBar";
 import { Viewer } from "./robot3d/Viewer";
 import { ChecksPanel } from "./ChecksPanel";
 import { SimView } from "./SimView";
-import { BrandSide, TopBar, type Tab } from "./TopBar";
+import { TopBar, type Tab } from "./TopBar";
 import { BuildView } from "./BuildView";
 import { OwlChat } from "./OwlChat";
 import type { Mode } from "./ModeSwitch";
@@ -208,17 +208,10 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
 
   if (mode === "build") {
     const openHistory = () => { setMode("design"); setHistoryOpen(true); };
-    if (manuals) return <BuildView manuals={manuals} status={manualStatus} design={current?.design ?? null} prompt={prompt} onMode={setMode} onHistory={openHistory} />;
-    // Waiting states keep the build header so Design stays one click away.
-    const wait = (view: React.ReactNode) => (
-      <div className="build">
-        <header className="topbar b-top"><BrandSide historyOpen={false} onHistory={openHistory} mode="build" onMode={setMode} canBuild={!!current} /></header>
-        <div className="app" style={{ height: "auto", flex: 1, minHeight: 0 }}>{view}</div>
-      </div>
-    );
-    if (!current) return wait(<EmptyView message="Design a robot first, then its manuals appear here." />);
-    if (manualFailed) return wait(<ErrorView message="The manuals didn’t come back." onRetry={() => { manualsFor.current = null; setManualTry((n) => n + 1); }} />);
-    return wait(<LoadingView title="Writing your manuals" prompt={current.design.summary} progress={manualStatus ? [manualStatus] : []} />);
+    const pending = !current ? <EmptyView message="Design a robot first, then its manuals appear here." />
+      : manualFailed ? <ErrorView message="The manuals didn’t come back." onRetry={() => { manualsFor.current = null; setManualTry((n) => n + 1); }} />
+      : <LoadingView title="Writing your manuals" prompt={current.design.summary} progress={manualStatus ? [manualStatus] : []} />;
+    return <BuildView manuals={manuals} pending={pending} status={manualStatus} design={current?.design ?? null} prompt={prompt} onMode={setMode} onHistory={openHistory} />;
   }
 
   return (
