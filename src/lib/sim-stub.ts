@@ -8,8 +8,8 @@ import {
   isCamera, isGripper, isPump, resolveParts, toolTopMm,
 } from "./derive";
 
-const ACTION_S = { water: 4, pickup: 3, drop: 2, photograph: 1, touch: 1 } as const;
-const OP_FOR = { water: "pump_on", pickup: "grip", drop: "release", photograph: "photograph", touch: "extend_arm" } as const;
+const ACTION_S: Record<string, number> = { water: 4, pickup: 3, drop: 2, photograph: 1, touch: 1 }; // others: 2 s
+const OP_FOR: Record<string, string> = { water: "pump_on", pickup: "grip", drop: "release", photograph: "photograph", touch: "extend_arm" }; // others: the action name
 
 export function simulate(design: Design, task: Task, room: Room, catalog: Part[]): SimResult {
   const r = resolveParts(design, catalog);
@@ -43,8 +43,8 @@ export function simulate(design: Design, task: Task, room: Room, catalog: Part[]
       else if (target.action === "water" && !r.parts.some(isPump)) { ok = false; note = "no pump to water with"; }
       else if (target.action === "pickup" && !r.parts.some(isGripper)) { ok = false; note = "no gripper to pick it up"; }
     }
-    t += ACTION_S[target.action];
-    events.push({ t: round1(t), targetId: target.id, op: OP_FOR[target.action], ok, note });
+    t += ACTION_S[target.action] ?? 2;
+    events.push({ t: round1(t), targetId: target.id, op: OP_FOR[target.action] ?? target.action, ok, note });
   }
   driveTo(room.home.x, room.home.y);
 

@@ -3,7 +3,7 @@
 import "server-only";
 import type { Content } from "@google/genai";
 import { z } from "zod";
-import { Design, RoutineStep, type Part } from "./contracts";
+import { Design, KNOWN_OPS, RoutineStep, type Part } from "./contracts";
 import type { Derived, Room, SimResult, Task } from "./data";
 import { deriveAndCheck, failureText } from "./derive";
 import { generateWithFallback, parseJsonText } from "./gemini";
@@ -51,7 +51,7 @@ function responseSchema(catalog: Part[], room: Room) {
         items: {
           type: "object",
           properties: {
-            op: { type: "string", enum: RoutineStep.shape.op.options },
+            op: { type: "string", description: `Step name. Prefer: ${KNOWN_OPS.join(", ")}. Invent a short snake_case name when none fits (e.g. spray, sweep, scan).` },
             target: { type: "string", enum: targetEnum },
             value: { type: "number" },
           },
@@ -96,8 +96,8 @@ Rules:
 - Prefer the cheapest design that passes every check and fits the budget. If the budget is too small, still return the closest feasible design.
 - Give every chosen part a one-sentence plain-English reason.
 - Pick targetIds from the room targets that the task is about, in a sensible visit order. If none fit, return an empty list.
-- The routine may only use these ops: ${RoutineStep.shape.op.options.join(", ")}. Use goto <target> before acting on it; end with return_home.
-- Wheeled robots only. If the task cannot be done by a wheeled robot, say so honestly in summary and return the closest feasible design.
+- The routine uses these ops where they fit: ${KNOWN_OPS.join(", ")}. If the task needs something else, invent a short snake_case op and add the parts for it. Use goto <target> before acting on it; end with return_home.
+- Wheeled robots only. Be creative: combine arms, tools and sensors freely. If the task cannot be done by a wheeled robot, say so honestly in summary and return the closest feasible design.
 - Keep the sum of part prices at or under the budget, but do not output prices or totals; code does that.
 - Add only parts the task needs. Skip optional extras (extra sensors, cameras for non-photo tasks) when they would push the total near the budget.
 
