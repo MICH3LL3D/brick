@@ -134,7 +134,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
       <div className="pop-anchor">
         <TopBar
           tab={tab} onTab={setTab} checksOpen={checksOpen} onChecks={() => setChecksOpen(!checksOpen)} failed={failed}
-          cartCount={cartParts.length} onCart={() => setCartOpen(true)}
+          cartCount={cartParts.length} onCart={() => setCartOpen(!cartOpen)}
           historyOpen={historyOpen} onHistory={() => setHistoryOpen(!historyOpen)}
         />
         {limitsOpen && (
