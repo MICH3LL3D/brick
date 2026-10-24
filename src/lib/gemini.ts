@@ -1,10 +1,8 @@
 // Server-only Gemini client. Never import this from client components:
-// the API key must stay on the server.
+// the API key must stay on the server. `server-only` makes a client import fail at build.
+// Node scripts that import this must run with `--conditions=react-server`.
+import "server-only";
 import { GoogleGenAI } from "@google/genai";
-
-if (typeof window !== "undefined") {
-  throw new Error("gemini.ts is server-only");
-}
 
 let client: GoogleGenAI | null = null;
 
@@ -25,15 +23,12 @@ export function isDemoMode(): boolean {
   return process.env.DEMO_MODE === "1";
 }
 
-/** Rejects if `p` does not settle within `ms`. Keeps the demo from hanging on bad wifi. */
-export function withTimeout<T>(p: Promise<T>, ms: number, label = "Gemini call"): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms} ms`)), ms);
-    p.then(
-      (v) => { clearTimeout(t); resolve(v); },
-      (e) => { clearTimeout(t); reject(e); },
-    );
-  });
+/**
+ * Abort signal for one Gemini call. Pass as `config.abortSignal` so a timed-out
+ * request is cancelled instead of running (and billing) in the background.
+ */
+export function geminiTimeout(ms = 30_000): AbortSignal {
+  return AbortSignal.timeout(ms);
 }
 
 /** Parses a JSON response body from Gemini, stripping ``` fences if the model added them. */
