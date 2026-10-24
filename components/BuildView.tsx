@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Design } from "@/lib/contracts";
+import type { RobotContext } from "@/lib/api";
 import { bookMeta, type BookIdT, type ManualSetT } from "@/lib/manual-format";
 import { BRAND } from "@/lib/brand";
 import { Wordmark } from "./Logo";
@@ -12,7 +13,7 @@ import { SprocketChat } from "./SprocketChat";
 type Pos = { book: BookIdT; page: number };
 const KEY = `${BRAND}-manual-done`;
 
-export function BuildView({ manuals, design, prompt, onMode }: { manuals: ManualSetT; design: Design | null; prompt: string; onMode: (m: Mode) => void }) {
+export function BuildView({ manuals, design, prompt, onMode, robot }: { manuals: ManualSetT; design: Design | null; prompt: string; onMode: (m: Mode) => void; robot?: RobotContext }) {
   const [pos, setPos] = useState<Pos>({ book: "0", page: 1 });
   const [from, setFrom] = useState<Pos | null>(null); // where a SEE tag was opened from
   // BuildView only mounts client-side (after the mode switch), so localStorage is safe in the initialiser.
@@ -102,7 +103,7 @@ export function BuildView({ manuals, design, prompt, onMode }: { manuals: Manual
             )}
           </div>
         </main>
-        <SprocketChat where={inSkill ? `Skills · ${page.title}` : where} design={design} prompt={prompt} />
+        <SprocketChat where={inSkill ? `Skills · ${page.title}` : where} design={design} prompt={prompt} robot={robot} />
       </div>
       <span hidden style={{ color: meta.color }} />
     </div>

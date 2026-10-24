@@ -2,12 +2,12 @@
 
 import { useRef, useState } from "react";
 import type { Design } from "@/lib/contracts";
-import { askSprocket } from "@/lib/api";
+import { askSprocket, type RobotContext } from "@/lib/api";
 
 type Msg = { role: "user" | "assistant"; content: string };
 const CHIPS = ["Is this wire right?", "Something smells hot"];
 
-export function SprocketChat({ where, design, prompt }: { where: string; design: Design | null; prompt: string }) {
+export function SprocketChat({ where, design, prompt, robot }: { where: string; design: Design | null; prompt: string; robot?: RobotContext }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,7 +20,7 @@ export function SprocketChat({ where, design, prompt }: { where: string; design:
     setMsgs(next); setText(""); setBusy(true); setOpen(true);
     // The server chat has no page context field yet, so the reader's place rides on the last user message.
     const withPlace = next.map((m, i) => (i === next.length - 1 ? { ...m, content: `[Reader is on ${where}] ${m.content}` } : m));
-    const reply = await askSprocket(withPlace, design, prompt);
+    const reply = await askSprocket(withPlace, design, prompt, robot);
     setMsgs([...next, { role: "assistant", content: reply }]);
     setBusy(false);
     setTimeout(() => end.current?.scrollIntoView({ behavior: "smooth" }), 0);
