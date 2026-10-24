@@ -6,7 +6,7 @@ import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
 import { useEffect, useMemo, useState } from "react";
 import { layoutRobot, type Vec3 } from "@/lib/robot3d/layout";
 import { ArmControls, ArmRig } from "./ArmRig";
-import { Selectable, Wiring } from "./Interaction";
+import { Selectable, Wiring, type DeckBounds } from "./Interaction";
 import { ChassisMesh, PartMesh, WheelMesh } from "./PartMesh";
 import { C } from "./theme";
 import type { SceneProps } from "./types";
@@ -18,7 +18,7 @@ function CameraFit({ bounds }: { bounds: Vec3 }) {
   const [bx, by, bz] = bounds;
   useEffect(() => {
     const span = Math.max(bx, by, bz, 0.2);
-    camera.position.set(span * 1.5, span * 1.1, span * 1.5);
+    camera.position.set(span * 0.95, span * 0.7, span * 0.95);
     controls?.target.set(0, by / 2, 0);
     controls?.update();
   }, [camera, controls, bx, by, bz]);
@@ -30,6 +30,13 @@ export function RobotScene(p: SceneProps) {
   const [extend, setExtend] = useState(0);
   const span = Math.max(...layout.bounds, 0.2);
   const MM = 0.001;
+  const chassisSize = layout.chassis?.size;
+  // Keep a dragged part's centre over the deck, inset by half its own size.
+  const boundsFor = (size: [number, number, number]): DeckBounds | undefined =>
+    chassisSize && {
+      minX: -chassisSize[0] / 2 + size[0] / 2, maxX: chassisSize[0] / 2 - size[0] / 2,
+      minZ: -chassisSize[2] / 2 + size[2] / 2, maxZ: chassisSize[2] / 2 - size[2] / 2,
+    };
 
   const toolNode = layout.tool && (
     <Selectable id={layout.tool.part.id} label={layout.tool.part.name} selected={p.selectedId === layout.tool.part.id} onSelect={p.onSelect}>
@@ -54,7 +61,7 @@ export function RobotScene(p: SceneProps) {
 
         {layout.chassis && (
           <Selectable id={layout.chassis.part.id} label={layout.chassis.part.name} selected={p.selectedId === layout.chassis.part.id} onSelect={p.onSelect}>
-            <ChassisMesh placed={layout.chassis} shell={p.layers.shell} frame={p.layers.frame} />
+            <ChassisMesh placed={layout.chassis} shell={p.layers.shell} frame={p.layers.frame} selected={p.selectedId === layout.chassis.part.id} />
           </Selectable>
         )}
         {layout.wheels.map((w) => <WheelMesh key={w.key} wheel={w} />)}
@@ -64,7 +71,7 @@ export function RobotScene(p: SceneProps) {
           return (
             <Selectable
               key={it.key} id={it.key} label={it.part.name} selected={p.selectedId === it.key}
-              draggable={it.role === "deck"} offsetMm={o}
+              draggable={it.role === "deck"} offsetMm={o} bounds={it.role === "deck" ? boundsFor(it.size) : undefined}
               onSelect={p.onSelect} onDrag={(next) => p.onMove(it.key, next)}
             >
               <group position={[it.pos[0] + o.x * MM, it.pos[1], it.pos[2] + o.y * MM]}>
@@ -81,11 +88,11 @@ export function RobotScene(p: SceneProps) {
         )}
         {!layout.arm && toolNode}
 
-        <Wiring layout={layout} visible={p.layers.wiring} />
+        <Wiring layout={layout} visible={p.layers.wiring} offsets={p.offsets} />
         <OrbitControls makeDefault target={[0, layout.bounds[1] / 2, 0]} minDistance={0.15} maxDistance={4} />
         <CameraFit bounds={layout.bounds} />
       </Canvas>
-      {layout.arm && <ArmControls extend={extend} onExtend={setExtend} />}
+      {layout.arm && <ArmControls extend={extend} onExtend={setExtend} rig={layout.arm} />}
     </div>
   );
 }
