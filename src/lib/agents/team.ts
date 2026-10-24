@@ -3,7 +3,7 @@
 import "server-only";
 import { z } from "zod";
 import type { Part } from "../contracts";
-import { RoutineStep } from "../contracts";
+import { KNOWN_OPS, RoutineStep } from "../contracts";
 import type { Room, Target } from "../data";
 import { approachDistanceMm, failureText, isExtendable, isPump, isTank, OBJECT_MASS_G, WATER_PER_PLANT_ML } from "../derive";
 import { generateWithFallback, parseJsonText } from "../gemini";
@@ -80,7 +80,7 @@ const OPTION_SPECS: Record<OptionSpecId, { categories: PartCategory[]; rules: st
     categories: ["arm", "tool"],
     rules: `Pick at most one arm, plus the tools and tank the task needs. An empty list is right when the task needs no arm (for example only photographing).
 - Reach: tool top = chassis height + arm liftMaxMm + 50 mm must be at least each acted target's height. The arm reachMm max + 50 must cover the approach distance.
-- Water needs a pump and a tank (100 ml per plant). Pickup needs a gripper and an arm with armPayloadG of at least 700. Reach applies only to water, pickup, drop and touch targets.
+- Water needs a pump and a tank (100 ml per plant). Pickup needs a gripper and an arm with armPayloadG of at least 700. Reach applies to every target except photograph.
 - Chassis height is not known yet: assume about 100 mm.`,
   },
   sensing: {
@@ -281,14 +281,14 @@ export async function generateTeamDesign(prompt: string, budgetUsd: number, room
                 type: "array",
                 items: {
                   type: "object",
-                  properties: { op: { type: "string", enum: RoutineStep.shape.op.options }, target: { type: "string", enum: targetIds }, value: { type: "number" } },
+                  properties: { op: { type: "string" }, target: { type: "string", enum: targetIds }, value: { type: "number" } },
                   required: ["op"],
                 },
               },
             },
             required: ["routine"],
           },
-          `You are the ${LABEL.routine} on a robot design team. Write the routine only. Allowed ops: ${RoutineStep.shape.op.options.join(", ")}. Use goto <target> before acting on it, visit targets in this order: ${brief.targetIds.join(", ") || "(none)"}. Use extend_arm/retract_arm only if the arm extends. End with return_home.${pump ? ` The pump moves ${pump.caps.pumpMlPerS} ml/s; a watering needs ${WATER_PER_PLANT_ML} ml, so pump_on lasts ${Math.ceil(WATER_PER_PLANT_ML / (pump.caps.pumpMlPerS || 1))} s.` : ""}`,
+          `You are the ${LABEL.routine} on a robot design team. Write the routine only. Preferred ops: ${KNOWN_OPS.join(", ")}. If the task needs a step none of these covers, invent a short snake_case op. Use goto <target> before acting on it, visit targets in this order: ${brief.targetIds.join(", ") || "(none)"}. Use extend_arm/retract_arm only if the arm extends. End with return_home.${pump ? ` The pump moves ${pump.caps.pumpMlPerS} ml/s; a watering needs ${WATER_PER_PLANT_ML} ml, so pump_on lasts ${Math.ceil(WATER_PER_PLANT_ML / (pump.caps.pumpMlPerS || 1))} s.` : ""}`,
           withFeedback("routine", header(`Robot parts:\n${lines(chosen1, byId)}\n`)),
         );
         team.routine = out.routine;
