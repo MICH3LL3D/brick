@@ -31,6 +31,12 @@ export const REQUIREMENTS_JSON_SCHEMA = {
 export const REQUIREMENTS_PROMPT = `You are a robotics engineer. Read a household task and estimate what it PHYSICALLY needs from a small wheeled robot.
 Use realistic everyday numbers (a hardcover book is ~25-40 mm thick and ~400-800 g; a bookshelf middle shelf is ~800-1200 mm high; a kitchen counter is ~900 mm; a coffee table ~450 mm; a potted plant needs ~100-200 ml of water).
 Do not pick parts. Do not worry about what parts exist. Only describe the task's needs.
+Be strict: every true flag or non-zero number adds parts and cost. Leave a need off unless the task clearly requires it.
+- needsCamera: true ONLY if the robot must see, find, identify, recognise, inspect or photograph something (e.g. "find my slippers", "check on the dog"). Fetching, carrying, watering or dispensing at a known spot does not need one.
+- needsDistanceSensor: true ONLY if the robot must drive around obstacles on its own in a cluttered space, or measure a distance. Driving a simple known route does not need one.
+- reachHeightMm: only when a tool must be raised to something above the robot's deck. A hose or nozzle on the deck already sits about 150 mm up and can pour into a pot whose rim is below about 300 mm, so watering floor plants needs reachHeightMm 0. A windowsill or table is different.
+- reachOutMm, gripWidthMm, liftMassG: 0 unless the robot grips or lifts something. carryMassG: 0 unless it carries a load on its deck.
+- runtimeMin: one mission, usually 5-15 minutes for a household task.
 If the task cannot be done by a wheeled ground robot (flying, stairs, outdoors in rough terrain, very heavy objects), set feasible=false and say why in notes, but still fill the numbers for the closest reasonable version of the task.
 Return ONLY JSON matching the schema.`;
 

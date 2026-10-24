@@ -7,7 +7,8 @@ import type { Content } from "@google/genai";
 import { z } from "zod";
 import { Design, Requirements, RoutineStep, type Part } from "./contracts";
 import type { Derived, Room, SimResult, Task } from "./data";
-import { deriveAndCheck, failureText } from "./derive";
+import { failureText } from "./derive";
+import { checkWithReasons, designGuidance, preRepair, unmetArmNeeds } from "./designHelpers";
 import { generateWithFallback, parseJsonText } from "./gemini";
 import { GENERATE_THINKING, MODELS } from "./models";
 import { impossibleNeeds, REQUIREMENTS_JSON_SCHEMA, REQUIREMENTS_PROMPT, type RequirementsT } from "./requirements";
@@ -93,6 +94,7 @@ You are given the task's physical requirements (estimated separately). Pick part
 
 Rules:
 - Use only the part ids listed. Never invent parts.
+- The task message lists, per need, the catalog parts that meet it (computed by code). Pick from those. If a need cannot be met, use the part named as closest, never a weaker one.
 - Prefer the cheapest design that meets the requirements and fits the budget. If the budget is too small, still return the design that best meets the requirements.
 - Give every chosen part a one-sentence plain-English reason tied to the task.
 - Wheeled robots only. If some requirement cannot be met by any catalog part, say so honestly in summary and return the closest design.
@@ -118,12 +120,13 @@ Catalog:
 ${catalogLines(catalog)}`;
 }
 
-function userPrompt(prompt: string, budgetUsd: number, req: RequirementsT, impossible: string[]): string {
+function userPrompt(prompt: string, budgetUsd: number, req: RequirementsT, impossible: string[], catalog: Part[]): string {
   return `Task: ${JSON.stringify(prompt)}
 Budget: $${budgetUsd}
 Requirements: ${JSON.stringify(req)}
-${impossible.length ? `No catalog part can meet: ${impossible.join("; ")}. Get as close as you can and say so in summary.
-` : ""}Return the design as JSON.`;
+${impossible.length ? `No catalog part can meet: ${impossible.join("; ")}. Get as close as you can (use the closest part named below) and say so in summary.
+` : ""}${designGuidance(req, catalog, budgetUsd)}
+Return the design as JSON.`;
 }
 
 /** Step 1: what the task physically needs. Validated with zod; throws if Gemini gives nothing usable. */
@@ -163,8 +166,12 @@ export type Attempt = { task: Task; design: Design; derived: Derived; failed: nu
 export async function generateDesign(prompt: string, budgetUsd: number, room: Room, catalog: Part[]): Promise<GenerateResult> {
   const req = await extractRequirements(prompt);
   const impossible = impossibleNeeds(req, catalog);
-  const impossibleIds = new Set(impossible.map((n) => n.checkId));
-  const contents: Content[] = [{ role: "user", parts: [{ text: userPrompt(prompt, budgetUsd, req, impossible.map((n) => n.text)) }] }];
+  // Arm needs each possible alone but not together (or not within budget) are treated the same way.
+  const armGap = unmetArmNeeds(req, catalog, budgetUsd);
+  const armGapNew = !!armGap && armGap.checkIds.some((id) => !impossible.some((n) => n.checkId === id));
+  const impossibleIds = new Set([...impossible.map((n) => n.checkId), ...(armGap?.checkIds ?? [])]);
+  const impossibleTexts = [...impossible.map((n) => n.text), ...(armGapNew ? [`every arm need at once (${armGap.text})`] : [])];
+  const contents: Content[] = [{ role: "user", parts: [{ text: userPrompt(prompt, budgetUsd, req, impossibleTexts, catalog) }] }];
   const config = {
     systemInstruction: systemPrompt(catalog),
     responseMimeType: "application/json",
@@ -195,23 +202,43 @@ export async function generateDesign(prompt: string, budgetUsd: number, room: Ro
       continue;
     }
 
-    const attempt = toAttempt(parsed.data, prompt, budgetUsd, room, catalog, req);
-    if (!best || attempt.failed < best.failed) best = attempt;
+    let attempt = toAttempt(parsed.data, prompt, budgetUsd, room, catalog, req);
+    // Fix mechanical failures (channels, servo board, 5V supply, reasons, closest arm) in code first.
+    const fixedNotes: string[] = [];
+    if (attempt.failed > 0) {
+      const fix = preRepair(attempt.design, attempt.derived, catalog, (d) => checkWithReasons(d, attempt.task, room, catalog), { req, impossibleIds });
+      const failed = fix.derived.checks.filter((c) => !c.ok).length;
+      if (fix.notes.length && failed <= attempt.failed) {
+        attempt = { ...attempt, design: fix.design, derived: fix.derived, failed };
+        fixedNotes.push(...fix.notes);
+        repairNotes.push(...fix.notes);
+      }
+    }
+    // Rank by failures repairs could fix first; failures no part can fix only break ties.
+    const fixable = (x: Attempt) => x.derived.checks.filter((c) => !c.ok && !impossibleIds.has(c.id)).length;
+    if (!best || fixable(attempt) < fixable(best) || (fixable(attempt) === fixable(best) && attempt.failed < best.failed)) best = attempt;
     if (attempt.failed === 0) break;
     // Repairs cannot fix a need no catalog part meets; stop once only those are left.
     if (attempt.derived.checks.every((c) => c.ok || impossibleIds.has(c.id))) break;
 
     const failures = failureText(attempt.derived);
     repairNotes.push(failures);
+    const codeFix = fixedNotes.length
+      ? `Code already fixed some problems:\n${fixedNotes.map((n) => `- ${n}`).join("\n")}\nThe design is now: ${JSON.stringify({ partIds: attempt.design.partIds, reasons: attempt.design.reasons })}\nStart from this design.\n`
+      : "";
     contents.push({
       role: "user",
-      parts: [{ text: `The design failed these checks:\n${failures}\n${priceHint(attempt, catalog)}Fix them by changing parts, keep the total within the $${budgetUsd} budget, and reply with the full corrected design as JSON.` }],
+      parts: [{ text: `${codeFix}The design failed these checks:\n${failures}\n${priceHint(attempt, catalog)}Fix them by changing parts, keep the total within the $${budgetUsd} budget, and reply with the full corrected design as JSON.` }],
     });
   }
 
   if (!best) throw new Error("Gemini did not return a usable design after repairs.");
   const sim = simulate(best.design, best.task, room, catalog);
-  const limitations = [...(req.feasible ? [] : [req.notes]), ...impossible.map((n) => `No catalog part can handle ${n.text}.`)];
+  const limitations = [
+    ...(req.feasible ? [] : [req.notes]),
+    ...impossible.map((n) => `No catalog part can handle ${n.text}.`),
+    ...(armGapNew ? [`The arm cannot meet every need: ${armGap.reason}. ${chosenArmText(best, catalog)}`] : []),
+  ];
   return { task: best.task, design: best.design, derived: best.derived, sim, ok: best.failed === 0, attempts, repairNotes, source: "gemini", limitations };
 }
 
@@ -227,11 +254,12 @@ export function toAttempt(g: z.infer<typeof GeminiDesign>, prompt: string, budge
 }
 
 /** deriveAndCheck plus a "reasons" check: every part must say why it was chosen. */
-export function checkWithReasons(design: Design, task: Task, room: Room, catalog: Part[]): Derived {
-  const derived = deriveAndCheck(design, task, room, catalog);
-  const missing = design.partIds.filter((id) => !design.reasons[id]);
-  if (missing.length) derived.checks.push({ id: "reasons", ok: false, message: `No reason given for: ${[...new Set(missing)].join(", ")}.` });
-  return derived;
+export { checkWithReasons };
+
+/** Names the arm the final design uses, for the limitations line. */
+function chosenArmText(a: Attempt, catalog: Part[]): string {
+  const arm = catalog.find((p) => p.category === "arm" && a.design.partIds.includes(p.id));
+  return arm ? `This design uses ${arm.id} as the closest fit.` : "This design has no arm.";
 }
 
 /** On a budget failure, list the chosen parts by price so the model can see what to swap. */
