@@ -419,6 +419,7 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .mode-switch { border-radius: 10px; }
 .mode-switch button { border-radius: 7px; }
 .mode-switch button.on { background: var(--red); color: var(--on-red); }
+.mode-switch button:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-line, .btn-ghost, .b-actions button, .chips button, .chat-foot input { border-color: var(--border); }
 .chat-log p:not(.user) { border: 2px solid var(--border); box-shadow: 3px 3px 0 var(--border); background: var(--panel); border-radius: 6px; }
 .drawer { border-left-width: 2px; }

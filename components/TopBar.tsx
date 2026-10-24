@@ -9,7 +9,7 @@ export function TopBar(p: {
   checksOpen: boolean; onChecks: () => void;
   failed: number; cartCount: number; onCart: () => void;
   historyOpen: boolean; onHistory: () => void;
-  mode: Mode; onMode: (m: Mode) => void;
+  mode: Mode; onMode: (m: Mode) => void; canBuild: boolean;
 }) {
   return (
     <div className="topbar">
@@ -20,7 +20,7 @@ export function TopBar(p: {
           </svg>
         </button>
         <Link className="logo" href="/"><Brick size={28} /><Wordmark /></Link>
-        <ModeSwitch mode={p.mode} onMode={p.onMode} />
+        <ModeSwitch mode={p.mode} onMode={p.onMode} canBuild={p.canBuild} />
       </div>
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={p.tab === "robot"} className={`tab${p.tab === "robot" ? " on" : ""}`} onClick={() => p.onTab("robot")}>3D Robot</button>
