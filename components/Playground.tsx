@@ -150,15 +150,14 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
       </div>
 
       <div className="body">
-        {historyOpen && (
-          <HistorySidebar
+        <HistorySidebar
+          open={historyOpen}
             items={robots.map((r) => ({ id: r.id, name: r.name, totalUsd: r.derived.totalUsd, parts: r.design.partIds.length }))}
             currentId={currentId}
             onPick={(id) => { setCurrentId(id); setSelectedId(null); }}
             onNew={() => { setCurrentId(null); setPrompt(""); setChecksOpen(false); }}
             onRename={(id, name) => patch(id, (r) => ({ ...r, name }))}
           />
-        )}
         <main className="stage">
           {busy && <LoadingView prompt={prompt} />}
           {!busy && !current && <EmptyView />}
