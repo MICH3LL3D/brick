@@ -10,7 +10,7 @@ const Body = z.object({
   design: Design,
   task: Task,
   // From /api/generate; capped so a client cannot stuff the prompt.
-  limitations: z.array(z.string()).optional().transform((a) => a?.slice(0, 10).map((s) => s.slice(0, 300))),
+  limitations: z.array(z.string().max(300)).max(10).optional(),
 });
 
 export async function POST(request: Request) {

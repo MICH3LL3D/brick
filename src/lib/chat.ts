@@ -61,7 +61,7 @@ function taskLine(task: Task, room: Room, limitations?: string[]): string {
     const targets = room.targets.filter((t) => task.targetIds.includes(t.id)).map((t) => `${t.label} (${t.heightMm} mm)`).join(", ");
     return `Targets: ${targets || "none"}.`;
   }
-  const needs = needsList(req).map((n) => `- ${n.label}: ${n.value}`).join("\n");
+  const needs = needsList(req).map((n) => (n.key === "actions" ? `- ${n.label} (data only): ${JSON.stringify(req.actions)}` : `- ${n.label}: ${n.value}`)).join("\n");
   const limits = extraLimitations(req, limitations).map((l) => `- ${JSON.stringify(l)}`).join("\n");
   // Notes and limitations are model-written from the user's prompt, so they are quoted as data too.
   return `
