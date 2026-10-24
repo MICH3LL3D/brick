@@ -20,7 +20,7 @@ export default function Robot3dDev() {
     [demo, catalog],
   );
   return (
-    <main style={{ padding: 16, color: "#F2EDE4", background: "#0B0A09", minHeight: "100vh", fontFamily: "system-ui" }}>
+    <main style={{ padding: 16, color: "#1A1714", background: "#F6F1E6", minHeight: "100vh", fontFamily: "system-ui" }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
         {(Object.keys(DEMOS) as (keyof typeof DEMOS)[]).map((k) => (
           <button key={k} onClick={() => { setDemo(k); setSelected(null); }} aria-pressed={demo === k}>{k}</button>

@@ -52,7 +52,7 @@ export function RobotScene(p: SceneProps) {
       >
         <ambientLight intensity={0.5} />
         <directionalLight position={[2, 4, 2]} intensity={1.2} castShadow />
-        <Grid args={[4, 4]} cellSize={0.05} sectionSize={0.25} cellColor="#2A2724" sectionColor="#3A3632" fadeDistance={3} infiniteGrid />
+        <Grid args={[4, 4]} cellSize={0.05} sectionSize={0.25} cellColor="#E3DCCB" sectionColor="#CFC6B0" fadeDistance={3} infiniteGrid />
         <ContactShadows position={[0, 0.001, 0]} opacity={0.5} scale={span * 4} blur={2} far={1} />
 
         {layout.chassis && (

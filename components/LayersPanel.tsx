@@ -6,8 +6,8 @@ const NAMES: [keyof Layers, string][] = [["shell", "Shell"], ["parts", "Parts"],
 
 const Eye = ({ on }: { on: boolean }) => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" strokeWidth="1.4" aria-hidden>
-    <path d="M1.5 8 C3.5 4.5 12.5 4.5 14.5 8 C12.5 11.5 3.5 11.5 1.5 8 Z" stroke={on ? "#3187A0" : "#A39B90"} opacity={on ? 1 : 0.5} />
-    {on ? <circle cx="8" cy="8" r="2" fill="#3187A0" /> : <path d="M2 14 L14 2" stroke="#A39B90" opacity=".5" />}
+    <path d="M1.5 8 C3.5 4.5 12.5 4.5 14.5 8 C12.5 11.5 3.5 11.5 1.5 8 Z" stroke={on ? "#2B6FC2" : "#5E574D"} opacity={on ? 1 : 0.5} />
+    {on ? <circle cx="8" cy="8" r="2" fill="#2B6FC2" /> : <path d="M2 14 L14 2" stroke="#5E574D" opacity=".5" />}
   </svg>
 );
 
@@ -42,8 +42,8 @@ export function LayersPanel(p: { name: string; onName: (s: string) => void; laye
       ))}
       <div className="head">
         <button className="fold" onClick={() => setOpen(!open)} aria-expanded={open}>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#A39B90" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? undefined : "rotate(-90deg)" }}><path d="M3 4.5 L6 7.5 L9 4.5" /></svg>
-          LAYERS{!open && <span style={{ color: "#3187A0" }}>{shown}/4</span>}
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#5E574D" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? undefined : "rotate(-90deg)" }}><path d="M3 4.5 L6 7.5 L9 4.5" /></svg>
+          LAYERS{!open && <span style={{ color: "#2B6FC2" }}>{shown}/4</span>}
         </button>
         {open && <button className={shown < 4 ? "accent" : undefined} onClick={() => p.onLayers(ALL_LAYERS)}>Reset</button>}
       </div>

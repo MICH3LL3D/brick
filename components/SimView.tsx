@@ -19,13 +19,13 @@ export function SimView({ room, sim }: { room: RoomT; sim: SimT }) {
   return (
     <div className="sim">
       <svg viewBox={`0 0 ${room.widthMm} ${room.depthMm}`} role="img" aria-label="Top-down simulation">
-        {room.obstacles.map((o) => <rect key={o.id} x={o.x} y={o.y} width={o.w} height={o.d} fill="#1C1A18" stroke="#242220" strokeWidth="8" />)}
-        <polyline points={sim.path.map((s) => `${s.x},${s.y}`).join(" ")} fill="none" stroke="#3187A0" strokeWidth="10" strokeDasharray="30 30" opacity=".7" />
+        {room.obstacles.map((o) => <rect key={o.id} x={o.x} y={o.y} width={o.w} height={o.d} fill="#F5C518" stroke="#1A1714" strokeWidth="14" />)}
+        <polyline points={sim.path.map((s) => `${s.x},${s.y}`).join(" ")} fill="none" stroke="#2B6FC2" strokeWidth="10" strokeDasharray="30 30" opacity=".7" />
         {room.targets.map((g) => {
           const ev = sim.events.find((e) => e.targetId === g.id);
-          return <circle key={g.id} cx={g.x} cy={g.y} r="70" fill={ev ? (ev.ok ? "#3187A0" : "#E58A7B") : "#A39B90"} />;
+          return <circle key={g.id} cx={g.x} cy={g.y} r="70" fill={ev ? (ev.ok ? "#2B6FC2" : "#D1352B") : "#A39B90"} />;
         })}
-        <circle cx={pos.x} cy={pos.y} r="90" fill="#F2EDE4" />
+        <circle cx={pos.x} cy={pos.y} r="90" fill="#D1352B" stroke="#1A1714" strokeWidth="14" />
       </svg>
       <ul>
         <li className="muted">{room.name} · {sim.durationS}s · battery {sim.batteryUsedPct}%</li>

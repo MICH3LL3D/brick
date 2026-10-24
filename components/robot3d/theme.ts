@@ -1,12 +1,12 @@
 // Colours shared by the 3D viewer. Matches the 2D schematic palette in RobotPreview.tsx.
 export const C = {
-  ink: "#F2EDE4",
-  muted: "#A39B90",
-  gold: "#C8A56A",
-  blue: "#3187A0",
-  bg: "#0B0A09",
-  panel: "#151412",
-  select: "#C8A56A",
+  ink: "#1A1714",
+  muted: "#5E574D",
+  gold: "#F5C518",
+  blue: "#2B6FC2",
+  bg: "#F6F1E6",
+  panel: "#FFFDF8",
+  select: "#D1352B",
 } as const;
 
 /** Base colour per catalog category. */

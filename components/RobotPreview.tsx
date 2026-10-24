@@ -3,7 +3,7 @@
 import type { Part } from "@/lib/contracts";
 import type { Layers } from "./LayersPanel";
 
-const INK = "#F2EDE4", MUTED = "#A39B90", GOLD = "#C8A56A", BLUE = "#3187A0", BG = "#0B0A09", PANEL = "#151412";
+const INK = "#1A1714", MUTED = "#5E574D", GOLD = "#D1352B", BLUE = "#2B6FC2", YELLOW = "#F5C518", RED = "#D1352B", PANEL = "#FFFDF8";
 
 // Side-view schematic drawn from the design's parts; matches the Paper frames, not a real 3D scene.
 type Box = { x: number; y: number; w: number; h: number };
@@ -47,15 +47,15 @@ export function RobotPreview(p: { parts: Part[]; layers: Layers; selectedId: str
   const sel = (id: string) => p.selectedId === id;
   const wheel = (cx: number) => (
     <g>
-      <circle cx={cx} cy="214" r="17" fill={BG} stroke={INK} strokeWidth="1.25" />
-      {open && p.layers.parts && has("chassis") && <rect x={cx - 6} y="207" width="12" height="14" rx="2" fill={PANEL} stroke={GOLD} />}
+      <circle cx={cx} cy="214" r="17" fill={INK} stroke={INK} strokeWidth="1.25" />
+      {open && p.layers.parts && has("chassis") && <rect x={cx - 6} y="207" width="12" height="14" rx="2" fill={YELLOW} stroke={INK} />}
     </g>
   );
 
   return (
     <svg viewBox="0 0 380 280" role="img" aria-label="Robot schematic" onPointerDown={() => p.onSelect(null)}>
-      <ellipse cx="190" cy="228" rx="150" ry="28" fill="none" stroke="#242220" />
-      <ellipse cx="190" cy="228" rx="96" ry="17" fill="none" stroke="#242220" />
+      <ellipse cx="190" cy="228" rx="150" ry="28" fill="none" stroke={INK} />
+      <ellipse cx="190" cy="228" rx="96" ry="17" fill="none" stroke={INK} />
 
       {chassis && (
         <g onPointerDown={(e) => down(e, chassis.id)} role="button" aria-label={chassis.name} style={{ cursor: "pointer" }}>
@@ -65,7 +65,7 @@ export function RobotPreview(p: { parts: Part[]; layers: Layers; selectedId: str
               <path d="M100 166 H280 M100 194 H280" stroke={MUTED} opacity=".7" fill="none" />
             </g>
           )}
-          {!open && <rect x="92" y="156" width="196" height="48" rx="8" fill={PANEL} stroke={sel(chassis.id) ? GOLD : INK} strokeWidth={sel(chassis.id) ? 2 : 1.25} />}
+          {!open && <rect x="92" y="156" width="196" height="48" rx="8" fill={RED} stroke={sel(chassis.id) ? YELLOW : INK} strokeWidth={sel(chassis.id) ? 3 : 2.5} />}
           {open && !p.layers.frame && <rect x="92" y="156" width="196" height="48" rx="8" fill="transparent" />}
           {wheel(126)}
           {wheel(254)}
@@ -85,9 +85,9 @@ export function RobotPreview(p: { parts: Part[]; layers: Layers; selectedId: str
             const b = placed.get(x.id)!, on = sel(x.id);
             return (
               <g key={x.id} className="part" onPointerDown={(e) => down(e, x.id)} role="button" aria-label={x.name}>
-                <rect x={b.x} y={b.y} width={b.w} height={b.h} rx="3" fill={on ? "#2A2418" : PANEL} stroke={inside(x) ? GOLD : MUTED} strokeWidth={on ? 2 : 1.25} />
-                <text x={b.x + b.w / 2} y={b.y + b.h / 2 + 3} fill={on ? INK : MUTED}>{labelOf(x)}</text>
-                {on && [[b.x - 3, b.y - 3], [b.x + b.w - 3, b.y - 3], [b.x - 3, b.y + b.h - 3], [b.x + b.w - 3, b.y + b.h - 3]].map(([cx, cy]) => <rect key={`${cx}${cy}`} x={cx} y={cy} width="6" height="6" fill={BG} stroke={GOLD} />)}
+                <rect x={b.x} y={b.y} width={b.w} height={b.h} rx="3" fill={on ? YELLOW : PANEL} stroke={inside(x) ? INK : MUTED} strokeWidth={on ? 2.5 : 1.5} />
+                <text x={b.x + b.w / 2} y={b.y + b.h / 2 + 3} fill={INK}>{labelOf(x)}</text>
+                {on && [[b.x - 3, b.y - 3], [b.x + b.w - 3, b.y - 3], [b.x - 3, b.y + b.h - 3], [b.x + b.w - 3, b.y + b.h - 3]].map(([cx, cy]) => <rect key={`${cx}${cy}`} x={cx} y={cy} width="6" height="6" fill={YELLOW} stroke={INK} />)}
               </g>
             );
           })}
@@ -97,8 +97,8 @@ export function RobotPreview(p: { parts: Part[]; layers: Layers; selectedId: str
       {arm && (
         <g onPointerDown={(e) => down(e, arm.id)} role="button" aria-label={arm.name} style={{ cursor: "pointer" }}>
           <path d={`M244 156 L244 98 L${tip.x - 4} ${tip.y}`} fill="none" stroke="transparent" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" />
-          <path d={`M244 156 L244 98 L${tip.x - 4} ${tip.y}`} fill="none" stroke={sel(arm.id) ? GOLD : INK} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          <circle cx="244" cy="98" r="5" fill={BG} stroke={sel(arm.id) ? GOLD : INK} strokeWidth="1.5" />
+          <path d={`M244 156 L244 98 L${tip.x - 4} ${tip.y}`} fill="none" stroke={sel(arm.id) ? GOLD : INK} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="244" cy="98" r="5" fill={YELLOW} stroke={sel(arm.id) ? GOLD : INK} strokeWidth="2" />
           <circle cx={tip.x + 4} cy="57" r="6" fill={BLUE} />
           <circle cx={tip.x + 4} cy="57" r="11" fill="none" stroke={BLUE} opacity=".5" />
           <path d={`M${tip.x + 4} 69 L${tip.x + 4} 228`} fill="none" stroke={BLUE} strokeDasharray="3 4" opacity=".7" />
