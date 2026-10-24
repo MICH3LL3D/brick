@@ -1,7 +1,7 @@
 {
   "prompt": "Patrol the apartment and take photos of the windows",
-  "recordedAt": "2026-10-24T18:19:14.005Z",
-  "origin": "hand-built",
+  "recordedAt": "2026-10-24T18:32:22.107Z",
+  "origin": "gemini",
   "task": {
     "prompt": "Patrol the apartment and take photos of the windows",
     "targetIds": [
@@ -10,24 +10,22 @@
     ]
   },
   "design": {
-    "summary": "A light 2-wheel patroller with a wide camera that snaps both windows.",
+    "summary": "A compact 2WD Raspberry Pi robot equipped with a camera module to patrol the apartment and take photos of all windows.",
     "partIds": [
-      "chassis-2wd-m",
       "pi4b-4gb",
+      "chassis-2wd-s",
       "md-tb6612",
-      "cam-pi3-wide",
-      "us-rcwl1601",
-      "bat-nimh-2200",
-      "reg-5v-3a"
+      "bat-nimh-900",
+      "reg-5v-3a",
+      "cam-pi3"
     ],
     "reasons": {
-      "chassis-2wd-m": "A small round base turns in place and fits the narrow doorway easily.",
-      "pi4b-4gb": "Runs the camera and driving code at the lower price.",
-      "md-tb6612": "A cheap dual driver is all two wheels need.",
-      "cam-pi3-wide": "The 120 degree lens gets a whole window in one shot.",
-      "us-rcwl1601": "Spots walls and furniture so the robot stops in time.",
-      "bat-nimh-2200": "Enough charge for a full lap of the apartment.",
-      "reg-5v-3a": "Gives the Pi a steady 5V 3A from the battery."
+      "pi4b-4gb": "Serves as the main controller for processing and controlling the robot.",
+      "chassis-2wd-s": "Provides a compact, low-cost two-wheel drive chassis for mobile navigation.",
+      "md-tb6612": "Provides dual DC motor channels to drive the two chassis wheels.",
+      "bat-nimh-900": "Provides a 7.2V rechargeable power source for the robot and step-down regulator.",
+      "reg-5v-3a": "Regulates 7.2V battery voltage down to 5V at up to 3.2A to reliably power the Raspberry Pi.",
+      "cam-pi3": "Captures high-resolution photographs of the windows during patrol."
     },
     "routine": [
       {
@@ -35,16 +33,14 @@
         "target": "window-living"
       },
       {
-        "op": "photograph",
-        "target": "window-living"
+        "op": "photograph"
       },
       {
         "op": "goto",
         "target": "window-office"
       },
       {
-        "op": "photograph",
-        "target": "window-office"
+        "op": "photograph"
       },
       {
         "op": "return_home"
