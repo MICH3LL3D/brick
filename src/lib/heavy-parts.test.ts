@@ -19,10 +19,15 @@ const base = (id: string) => {
   assert.ok(p, `catalog has ${id}`);
   return p;
 };
+/** Copy of a catalog part with the new optional caps cleared, so tests do not depend on catalog data. */
 const fake = (from: string, id: string, caps: Partial<Part["caps"]>, extra: Partial<Part> = {}): Part => {
   const p = base(from);
-  return { ...p, ...extra, id, caps: { ...p.caps, ...caps } };
+  const { stallA: _s, speedMmS: _v, servoCount: _n, feedback: _f, ...rest } = p.caps;
+  void [_s, _v, _n, _f];
+  return { ...p, ...extra, id, caps: { ...rest, ...caps } };
 };
+const PLAIN_LACT = fake("arm-lact10p", "arm-plain-test", {});
+const PLAIN_CHASSIS = fake("chassis-4wd-m", "chassis-plain-test", {});
 
 const BIG_ARM = fake("arm-lact10p", "arm-big-test", { stallA: 5, speedMmS: 9 });
 const POT_ARM = fake("arm-lact10p", "arm-pot-test", { feedback: "pot" });
@@ -32,14 +37,14 @@ const SIX_ARM_NAMED = fake("arm-waveshare-4dof", "arm-6dof-test", {}, { name: "T
 const GRIPPER_2 = fake("tool-gripper", "tool-gripper-test", {});
 const PACK_6V = fake("bat-nimh-2200", "bat-6v-test", { outputV: 6 });
 const STALL_CHASSIS = fake("chassis-4wd-m", "chassis-stall-test", { stallA: 5.6 });
-const fakes = [BIG_ARM, POT_ARM, HALL_ARM, SIX_ARM, SIX_ARM_NAMED, GRIPPER_2, PACK_6V, STALL_CHASSIS];
+const fakes = [PLAIN_LACT, PLAIN_CHASSIS, BIG_ARM, POT_ARM, HALL_ARM, SIX_ARM, SIX_ARM_NAMED, GRIPPER_2, PACK_6V, STALL_CHASSIS];
 const all = [...catalog, ...fakes];
 
 const design = (partIds: string[]): Design => ({ summary: "t", partIds, reasons: {}, routine: [], budgetUsd: 5000 });
 const derive = (ids: string[]) => deriveAndCheck(design(ids), task, room, all);
 const check = (d: ReturnType<typeof derive>, id: string) => d.checks.find((c) => c.id === id);
 
-const CORE = ["chassis-4wd-m", "pi4b-4gb", "bat-nimh-2200", "reg-5v-3a"];
+const CORE = [PLAIN_CHASSIS.id, "pi4b-4gb", "bat-nimh-2200", "reg-5v-3a"];
 
 test("a 5 A arm on a TB6612 channel fails motor-current and names the G2 driver", () => {
   const d = derive([...CORE, "md-tb6612", "md-tb6612", BIG_ARM.id]);
@@ -56,7 +61,7 @@ test("a 5 A arm on a G2 channel passes motor-current", () => {
 });
 
 test("motor-current is skipped when no part lists a stall current", () => {
-  const d = derive([...CORE, "md-motor-hat", "arm-lact10p"]);
+  const d = derive([...CORE, "md-motor-hat", PLAIN_LACT.id]);
   assert.equal(check(d, "motor-current"), undefined);
 });
 
@@ -115,7 +120,7 @@ test("hall-feedback arm: pin map labels the hall pins and the kit counts pulses"
 });
 
 test("arm without speedMmS keeps the 14 mm/s default", () => {
-  const ids = [...CORE, "md-motor-hat", "arm-lact10p"];
+  const ids = [...CORE, "md-motor-hat", PLAIN_LACT.id];
   const d = derive(ids);
   const dz = design(ids);
   const config = piFiles(dz, task, d, simulate(dz, task, room, all), room, all).find((f) => f.path === "pi/config.py")!.content;
