@@ -77,3 +77,10 @@ test("missing tank says to add one", () => {
   const d = deriveAndCheck(design(MID.filter((id) => id !== "tank-500")), waterTask, room, catalog);
   assert.match(d.checks.find((c) => c.id === "tank")!.message, /no tank/);
 });
+
+test("a 2-wheel chassis fails the structure check (forced 4-wheel rule)", () => {
+  const d = deriveAndCheck(design(CHEAP.map((id) => (id === "chassis-4wd-m" ? "chassis-2wd-m" : id))), waterTask, room, catalog);
+  const s = d.checks.find((c) => c.id === "structure")!;
+  assert.equal(s.ok, false);
+  assert.match(s.message, /at least 4 wheels/);
+});

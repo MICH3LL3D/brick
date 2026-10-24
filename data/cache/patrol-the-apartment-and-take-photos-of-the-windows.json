@@ -10,10 +10,10 @@
     ]
   },
   "design": {
-    "summary": "A compact 2WD Raspberry Pi robot equipped with a camera module to patrol the apartment and take photos of all windows.",
+    "summary": "A compact 4WD Raspberry Pi robot equipped with a camera module to patrol the apartment and take photos of all windows.",
     "partIds": [
       "pi4b-4gb",
-      "chassis-2wd-s",
+      "chassis-4wd-m",
       "md-tb6612",
       "bat-nimh-900",
       "reg-5v-3a",
@@ -21,8 +21,8 @@
     ],
     "reasons": {
       "pi4b-4gb": "Serves as the main controller for processing and controlling the robot.",
-      "chassis-2wd-s": "Provides a compact, low-cost two-wheel drive chassis for mobile navigation.",
-      "md-tb6612": "Provides dual DC motor channels to drive the two chassis wheels.",
+      "chassis-4wd-m": "Provides a four-wheel drive chassis that balances and carries the camera.",
+      "md-tb6612": "Provides dual DC motor channels to drive the chassis wheels.",
       "bat-nimh-900": "Provides a 7.2V rechargeable power source for the robot and step-down regulator.",
       "reg-5v-3a": "Regulates 7.2V battery voltage down to 5V at up to 3.2A to reliably power the Raspberry Pi.",
       "cam-pi3": "Captures high-resolution photographs of the windows during patrol."

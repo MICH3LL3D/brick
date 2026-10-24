@@ -90,6 +90,7 @@ const OPTION_SPECS: Record<OptionSpecId, { categories: PartCategory[]; rules: st
   power: {
     categories: ["controller", "motor_driver", "power", "misc"],
     rules: `Pick exactly one controller (Raspberry Pi), at least one motor driver, 1-2 batteries, and the regulators and boards the loads below need.
+- The chassis must have at least 4 wheels (caps.wheels >= 4) so the robot balances; never pick a 2-wheel chassis.
 - Motor channels: wheels need 2; each linear actuator arm and each DC pump (interface=gpio) needs 1 more. I2C motor HATs give 4 channels, other drivers 2.
 - Any part with interface=pwm needs the PCA9685 servo board.
 - The Pi needs 5V at 3A: a 5V step-down regulator (maxCurrentA>=3) fed by a battery above 5.5V. USB power banks give only 2A, which fails.

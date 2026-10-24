@@ -5,7 +5,7 @@ import type { Content, FunctionDeclaration } from "@google/genai";
 import { z } from "zod";
 import { ChatAction, type Design, type Part } from "./contracts";
 import type { Room, Task } from "./data";
-import { deriveAndCheck, resolveParts } from "./derive";
+import { deriveAndCheck, MIN_WHEELS, resolveParts } from "./derive";
 import { generateWithFallback } from "./gemini";
 import { MODELS } from "./models";
 
@@ -197,6 +197,7 @@ function validateAction(a: ChatActionT, design: Design, task: Task, room: Room, 
     if (!design.partIds.includes(a.removeId)) return { reject: `${out.name} isn't in this design, so I left it alone.` };
     if (design.partIds.includes(a.addId)) return { reject: `The ${inn.name} is already in the design.` };
     if (out.category !== inn.category) return { reject: `I can only swap a part for one of the same kind, so I didn't swap ${out.name}.` };
+    if (inn.category === "chassis" && (inn.caps.wheels ?? 0) < MIN_WHEELS) return { reject: `The ${inn.name} has only ${inn.caps.wheels ?? 0} wheels. Every robot needs at least ${MIN_WHEELS} so it can balance.` };
     const swapped = { ...design, partIds: design.partIds.map((id) => (id === a.removeId ? a.addId : id)) };
     const before = new Set(deriveAndCheck(design, task, room, catalog).checks.filter((c) => !c.ok).map((c) => c.id));
     const newFails = deriveAndCheck(swapped, task, room, catalog).checks.filter((c) => !c.ok && !before.has(c.id));

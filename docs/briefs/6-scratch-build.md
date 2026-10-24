@@ -27,14 +27,14 @@ Add real, priced, linked parts. Everything starts `verified:false`.
 - Notes carry the gotchas (motor stall current, caster height must match wheel radius, cardboard flexes under a full water tank).
 
 ## Checks (src/lib/derive.ts, B)
-- Structure check passes with exactly one base: either one `chassis`, or one `structure` sheet plus at least 2 drive wheels from `drivetrain`, matching motors, and one caster.
+- Structure check passes with exactly one base: either one `chassis`, or one `structure` sheet plus at least 4 drive wheels from `drivetrain` (forced rule), matching motors, and one caster.
 - Payload: for a scratch base, use the sheet's `maxPayloadG` instead of the chassis value.
 - Motor channels: count scratch motors the same way kit chassis motors are counted today (2 per base).
 - Footprint and height: take them from the sheet dims. Tool top uses sheet thickness plus wheel radius.
 - Failure messages stay plain English and are fed back to Gemini.
 
 ## Gemini (src/lib/generate.ts, B)
-- Prompt rules: "Exactly one base: a kit chassis, or a scratch base made of one sheet, 2+ drive wheels with motors, and a caster." Keep catalog-id-only enforcement and the repair loop.
+- Prompt rules: "Exactly one base: a kit chassis, or a scratch base made of one sheet, 4+ drive wheels with motors." Keep catalog-id-only enforcement and the repair loop.
 - Default to a kit chassis unless the user asks to build it themselves or the budget cannot fit one. A flag on the request (`buildFromScratch?: boolean`) can force scratch mode; A will add a toggle to the prompt bar once that flag exists.
 
 ## Kit manual (src/lib/kit/, B)
