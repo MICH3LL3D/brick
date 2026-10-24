@@ -19,7 +19,6 @@ import { ChecksPanel } from "./ChecksPanel";
 import { SimView } from "./SimView";
 import { TopBar, type Tab } from "./TopBar";
 import { BuildView } from "./BuildView";
-import { SAMPLE_MANUALS } from "@/lib/manual-sample";
 import { OwlChat } from "./OwlChat";
 import type { Mode } from "./ModeSwitch";
 import type { ManualSetT } from "@/lib/manual-format";
@@ -57,26 +56,31 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const [mode, setMode] = useState<Mode>("design");
   const [manuals, setManuals] = useState<ManualSetT | null>(null);
   const [manualStatus, setManualStatus] = useState("");
+  const [manualFailed, setManualFailed] = useState(false);
+  const [manualTry, setManualTry] = useState(0); // bumped to rerun the manual effect on retry
   const manualsFor = useRef<string | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const budgetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const started = useRef(false);
 
-  // Build opens the sample manuals at once, then swaps in the ones Gemini writes for this robot.
+  // Build shows the brick loading screen while the manuals are written for this robot; there are no placeholder pages.
   useEffect(() => {
     if (mode !== "build") return;
     const key = currentId ?? "none";
     if (manualsFor.current === key) return;
     manualsFor.current = key;
     const design = robots.find((r) => r.id === currentId)?.design ?? null;
-    setManuals(SAMPLE_MANUALS);
+    setManuals(null);
+    setManualFailed(false);
     if (!design) return;
     setManualStatus("Writing your manuals…");
     getManuals(design, prompt, setManualStatus).then((m) => {
-      if (manualsFor.current === key) setManuals(m);
+      if (manualsFor.current !== key) return;
+      setManuals(m);
+      setManualFailed(!m);
       setManualStatus("");
     });
-  }, [mode, robots, currentId, prompt]);
+  }, [mode, robots, currentId, prompt, manualTry]);
 
   const current = robots.find((r) => r.id === currentId) ?? null;
   const partsOf = useCallback((ids: string[]) => ids.map((i) => catalog.find((p) => p.id === i) ?? SUPPLIES.find((p) => p.id === i)).filter((p): p is Part => !!p), [catalog]);
@@ -202,9 +206,11 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
   const failed = current?.derived.checks.filter((c) => !c.ok).length ?? 0;
   const arm = parts.find((p) => p.category === "arm");
 
-  // Build with no robot yet still opens the sample manuals so the shelf and legend are reachable.
   if (mode === "build") {
-    return manuals ? <BuildView manuals={manuals} status={manualStatus} design={current?.design ?? null} prompt={prompt} onMode={setMode} /> : <div className="app" />;
+    if (manuals) return <BuildView manuals={manuals} status={manualStatus} design={current?.design ?? null} prompt={prompt} onMode={setMode} />;
+    if (!current) return <div className="app"><EmptyView message="Design a robot first, then its manuals appear here." /><button className="btn-gold" onClick={() => setMode("design")}>Back to design</button></div>;
+    if (manualFailed) return <div className="app"><ErrorView message="The manuals didn’t come back." onRetry={() => { manualsFor.current = null; setManualTry((n) => n + 1); }} /></div>;
+    return <div className="app"><LoadingView title="Writing your manuals" prompt={current.design.summary} progress={manualStatus ? [manualStatus] : []} /></div>;
   }
 
   return (

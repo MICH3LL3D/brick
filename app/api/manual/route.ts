@@ -1,6 +1,6 @@
-// POST /api/manual { design, task, stream? } -> ManualSet (source "gemini")
+// POST /api/manual { design, task, stream? } -> ManualSet (source "gemini", or "template" when offline)
 // With stream:true the reply is NDJSON like /api/generate: {"progress"} lines, then {"result"} or {"error","status"}.
-// Without a Gemini key (or in DEMO_MODE) it answers 503 and the viewer keeps the sample manuals.
+// Without a Gemini key (or in DEMO_MODE) code writes the manual alone (source "template"), so Build never shows empty pages.
 import { z } from "zod";
 import { generateManuals } from "@/lib/manuals/build";
 import { Design, RoutineStep } from "@/lib/contracts";
@@ -31,7 +31,7 @@ type Reply = { result: unknown } | { error: string; status: number };
 export async function POST(request: Request) {
   const body = Body.safeParse(await request.json().catch(() => null));
   if (!body.success) return Response.json({ error: "Send { design, task }." }, { status: 400 });
-  if (isDemoMode() || !hasGeminiKey()) return Response.json({ error: "Manuals need a Gemini connection." }, { status: 503 });
+  const offline = isDemoMode() || !hasGeminiKey();
   if (running >= 2) return Response.json({ error: "Busy writing manuals. Try again in a moment." }, { status: 429 });
   const { task, stream } = body.data;
   const design = { ...body.data.design, reasons: {} }; // reasons are not used by the manual and must not reach prompts
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     running++;
     try {
       const derived = deriveAndCheck(design, task, loadRoom(), catalog);
-      return { result: await generateManuals(design, derived, catalog, say) };
+      return { result: await generateManuals(design, derived, catalog, say, offline) };
     } catch (e) {
       console.error("[manual]", e);
       return { error: "Could not write the manuals right now.", status: 502 };

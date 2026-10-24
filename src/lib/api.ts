@@ -1,6 +1,5 @@
 import type { z } from "zod";
 import type { ChatAction, Design, Part, Task } from "./contracts";
-import { SAMPLE_MANUALS } from "./manual-sample";
 import { ManualSet, type ManualSetT } from "./manual-format";
 import { loadCatalog, loadRoom } from "./data";
 import { stubResult, type Result, type RoomT } from "./stub";
@@ -102,18 +101,17 @@ export function exportCsv(rows: { robot: string; part: Part; reason?: string }[]
 
 /**
  * POST /api/manual (Gemini writer agents + code for pins and counts + photo agents). Streams progress lines while it works.
- * Without a design, or if the route fails or has no Gemini key, the sample manuals are returned so the viewer still works.
+ * Returns null if the route fails; the viewer then offers a retry. Without a Gemini key the route writes the manual from code alone.
  */
-export async function getManuals(design: Design | null, prompt: string, onProgress?: (text: string) => void): Promise<ManualSetT> {
-  if (!design) return SAMPLE_MANUALS;
+export async function getManuals(design: Design, prompt: string, onProgress?: (text: string) => void): Promise<ManualSetT | null> {
   try {
     const res = await fetch("/api/manual", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ design, task: { prompt, targetIds: [] }, stream: true }), signal: AbortSignal.timeout(180_000) });
-    if (!res.ok || !res.body) return SAMPLE_MANUALS;
+    if (!res.ok || !res.body) return null;
     const { result } = await readNdjson(res, onProgress);
     const ok = ManualSet.safeParse(result);
-    return ok.success ? ok.data : SAMPLE_MANUALS;
+    return ok.success ? ok.data : null;
   } catch {
-    return SAMPLE_MANUALS;
+    return null;
   }
 }
 

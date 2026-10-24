@@ -89,7 +89,6 @@ export function BuildView({ manuals, status = "", design, prompt, onMode }: { ma
           {inSkill && <h2 className="b-title">Skills · {page.title}</h2>}
           {!inSkill && page.warning && <div className="b-warn">▲ {page.warning}</div>}
           {status && <div className="b-note" role="status" aria-live="polite">{status}</div>}
-          {manuals.source === "sample" && !status && <div className="b-warn">Sample manual, not built from your robot. The build kit is untested on hardware.</div>}
           <ManualPage page={page} total={book.pages.length} onOpen={open} />
           <div className="b-actions">
             {inSkill ? (
