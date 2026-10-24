@@ -45,37 +45,35 @@ const PRIMARY_COOLDOWN_MS = 5 * 60_000;
 const degradedUntil = new Map<string, number>();
 
 /**
- * Calls `params.model`, and on timeout, overload (503) or quota (429) retries once on
- * MODELS.FALLBACK (with one retry after a short backoff). A primary that failed is skipped for 5 minutes so later calls do not wait again.
+ * Calls `params.model`, then on timeout, overload (5xx) or quota (429) walks down
+ * MODELS.FALLBACK and MODELS.FALLBACK_2, once each. A model that failed is skipped for
+ * 5 minutes so later calls do not wait on it again. The last model is always tried.
  */
 export async function generateWithFallback(
   params: GenerateContentParameters,
   { primaryTimeoutMs = 25_000, fallbackTimeoutMs = 45_000 } = {},
 ): Promise<GenerateContentResponse & { modelUsed: string }> {
   const ai = getGemini();
-  const primary = params.model;
-  const fallback = MODELS.FALLBACK;
+  const chain = [...new Set([params.model, MODELS.FALLBACK, MODELS.FALLBACK_2])];
   const run = async (model: string, ms: number) => {
     const res = await ai.models.generateContent({ ...params, model, config: { ...params.config, abortSignal: geminiTimeout(ms) } });
     return Object.assign(res, { modelUsed: model });
   };
 
-  if (primary !== fallback && (degradedUntil.get(primary) ?? 0) < Date.now()) {
+  let lastError: unknown;
+  for (const [i, model] of chain.entries()) {
+    const last = i === chain.length - 1;
+    if (!last && (degradedUntil.get(model) ?? 0) > Date.now()) continue;
     try {
-      return await run(primary, primaryTimeoutMs);
+      return await run(model, i === 0 ? primaryTimeoutMs : fallbackTimeoutMs);
     } catch (e) {
       if (!isTransient(e)) throw e;
-      console.warn(`[gemini] ${primary} unavailable (${(e as Error).message.slice(0, 80)}); using ${fallback}`);
-      degradedUntil.set(primary, Date.now() + PRIMARY_COOLDOWN_MS);
+      lastError = e;
+      console.warn(`[gemini] ${model} unavailable (${(e as Error).message.slice(0, 80)})${last ? "" : `; trying ${chain[i + 1]}`}`);
+      degradedUntil.set(model, Date.now() + PRIMARY_COOLDOWN_MS);
     }
   }
-  try {
-    return await run(fallback, fallbackTimeoutMs);
-  } catch (e) {
-    if (!isTransient(e)) throw e;
-    await new Promise((r) => setTimeout(r, 2_000)); // one short backoff for overload spikes
-    return run(fallback, fallbackTimeoutMs);
-  }
+  throw lastError;
 }
 
 function isTransient(e: unknown): boolean {

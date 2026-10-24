@@ -9,6 +9,7 @@ export const MODELS = {
   CATALOG_SCRAPE: "gemini-3.8-flash", // used with Google Search grounding
   CHEAP: "gemini-3.5-flash-lite",     // assembly manual text
   FALLBACK: "gemini-3.6-flash",       // used when the primary is slow or overloaded (seen 2026-10-24)
+  FALLBACK_2: "gemini-3.1-flash-lite", // last resort: fast, lower quality
 } as const;
 
 export type ModelRole = keyof typeof MODELS;
