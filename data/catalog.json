@@ -397,7 +397,7 @@
     "mounts": [
       "deck"
     ],
-    "notes": "Extendable arm: mount vertically as a lift mast, about 356 mm retracted plus 250 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: read it through an ADS1115, not a Pi pin. Reach range assumes a small servo wrist on top (estimate)."
+    "notes": "Extendable arm: mount vertically as a lift mast, about 356 mm retracted plus 250 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: power it from 3.3V and read the wiper through an ADS1115, not a Pi pin. Reach range assumes a small servo wrist on top (estimate)."
   },
   {
     "id": "arm-lact12p",
@@ -427,7 +427,7 @@
     "mounts": [
       "deck"
     ],
-    "notes": "Extendable arm: mount vertically as a lift mast, about 394 mm retracted plus 300 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: read it through an ADS1115. Reach range assumes a small servo wrist on top (estimate)."
+    "notes": "Extendable arm: mount vertically as a lift mast, about 394 mm retracted plus 300 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: power it from 3.3V and read the wiper through an ADS1115. Reach range assumes a small servo wrist on top (estimate)."
   },
   {
     "id": "arm-lact4p",
@@ -457,7 +457,7 @@
     "mounts": [
       "deck"
     ],
-    "notes": "Extendable arm: about 210 mm retracted plus 100 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Analog feedback via ADS1115."
+    "notes": "Extendable arm: about 210 mm retracted plus 100 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Analog feedback: power the pot from 3.3V and read it via ADS1115."
   },
   {
     "id": "tool-gripper",

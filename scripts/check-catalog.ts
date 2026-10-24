@@ -6,38 +6,22 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { Part, Room } from "../src/lib/contracts";
+import { extractPrice, fetchPage } from "./vendor";
 
 const root = join(__dirname, "..");
 const catalogPath = join(root, "data/catalog.json");
 const roomPath = join(root, "data/room.json");
 
-const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36";
-
-/** Pulls the product price out of a vendor page. Each vendor marks it up differently. */
-function extractPrice(html: string): number | null {
-  const patterns = [
-    /product:price:amount" content="([0-9.]+)"/, // Adafruit, SparkFun (Open Graph)
-    /"price":"([0-9.]+)"/,                        // Pololu (JSON-LD)
-    /"price":([0-9.]+)[,}]/,                      // DFRobot
-  ];
-  for (const re of patterns) {
-    const m = html.match(re);
-    if (m) return Number(m[1]);
-  }
-  return null;
-}
-
 async function refreshPrices(parts: Part[]) {
   for (const p of parts) {
     try {
-      const res = await fetch(p.url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(20_000) });
-      const html = await res.text();
-      const price = res.ok ? extractPrice(html) : null;
+      const { status, html } = await fetchPage(p.url);
+      const price = status === 200 ? extractPrice(html) : null;
       if (price && price > 0) {
         if (price !== p.priceUsd) console.log(`price ${p.id}: ${p.priceUsd} -> ${price}`);
         p.priceUsd = price;
       } else {
-        console.warn(`no price found for ${p.id} (HTTP ${res.status}); kept ${p.priceUsd}`);
+        console.warn(`no price found for ${p.id} (HTTP ${status}); kept ${p.priceUsd}`);
       }
     } catch (e) {
       console.warn(`fetch failed for ${p.id}: ${(e as Error).message}`);
@@ -64,6 +48,7 @@ async function main() {
   }
 
   const room = Room.parse(JSON.parse(readFileSync(roomPath, "utf8")));
+  checkRoomGeometry(room);
 
   console.table(
     [...parts]
@@ -71,6 +56,20 @@ async function main() {
       .map((p) => ({ id: p.id, category: p.category, priceUsd: p.priceUsd, vendor: p.vendor, verified: p.verified })),
   );
   console.log(`catalog OK: ${parts.length} parts. room OK: ${room.name}, ${room.targets.length} targets.`);
+}
+
+/** Cheap sanity checks on the hand-written room: bounds, free home, targets inside the room. */
+function checkRoomGeometry(room: z.infer<typeof Room>) {
+  const problems: string[] = [];
+  const inRoom = (x: number, y: number) => x >= 0 && y >= 0 && x <= room.widthMm && y <= room.depthMm;
+  for (const o of room.obstacles) {
+    if (!inRoom(o.x, o.y) || !inRoom(o.x + o.w, o.y + o.d)) problems.push(`obstacle ${o.id} leaves the room`);
+    if (room.home.x >= o.x && room.home.x <= o.x + o.w && room.home.y >= o.y && room.home.y <= o.y + o.d)
+      problems.push(`home is inside ${o.id}`);
+  }
+  for (const t of room.targets) if (!inRoom(t.x, t.y)) problems.push(`target ${t.id} is outside the room`);
+  for (const d of room.doorways) if (!inRoom(d.x, d.y)) problems.push(`doorway at ${d.x},${d.y} is outside the room`);
+  if (problems.length) throw new Error(`room.json: ${problems.join("; ")}`);
 }
 
 main().catch((e) => {

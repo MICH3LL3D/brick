@@ -19,10 +19,10 @@
   "home": { "x": 600, "y": 1500 },
   "targets": [
     { "id": "plant-floor", "label": "fern on the floor by the window", "x": 400, "y": 400, "heightMm": 250, "action": "water" },
-    { "id": "plant-table", "label": "pothos on the side table", "x": 3000, "y": 3950, "heightMm": 440, "action": "water" },
-    { "id": "plant-shelf", "label": "succulent on top of the bookshelf", "x": 5750, "y": 2450, "heightMm": 650, "action": "water" },
+    { "id": "plant-table", "label": "pothos on the side table", "x": 2850, "y": 3800, "heightMm": 440, "action": "water" },
+    { "id": "plant-shelf", "label": "succulent on top of the bookshelf", "x": 5650, "y": 2450, "heightMm": 650, "action": "water" },
     { "id": "bottle-desk", "label": "water bottle on the desk", "x": 4900, "y": 650, "heightMm": 760, "action": "pickup" },
-    { "id": "couch-drop", "label": "couch seat", "x": 1300, "y": 3800, "heightMm": 450, "action": "drop" },
+    { "id": "couch-drop", "label": "couch seat", "x": 1300, "y": 3650, "heightMm": 450, "action": "drop" },
     { "id": "window-living", "label": "living room window", "x": 1800, "y": 50, "heightMm": 900, "action": "photograph" },
     { "id": "window-office", "label": "office window", "x": 5950, "y": 3800, "heightMm": 900, "action": "photograph" }
   ]
