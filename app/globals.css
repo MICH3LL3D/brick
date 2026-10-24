@@ -79,7 +79,7 @@ a { color: inherit; text-decoration: none; }
 .layers .head button { font: 400 12.5px/16px var(--sans); letter-spacing: 0; color: var(--muted); }
 .layers .head button.accent { color: var(--blue); }
 .layers .head .fold { display: flex; align-items: center; gap: 8px; letter-spacing: inherit; font: inherit; }
-.layer-row { width: 100%; height: 34px; display: flex; align-items: center; gap: 10px; text-align: left; }
+.layer-row { width: 100%; height: 34px; display: flex; align-items: center; gap: 12px; text-align: center; }
 .layer-row.off { color: var(--muted); }
 
 .reach { position: absolute; left: 28px; bottom: 140px; }
@@ -202,14 +202,15 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .pop-anchor { position: relative; }
 
 /* loading + empty */
-.center { position: absolute; inset: 0 0 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; }
+.center { position: absolute; inset: 0 0 150px; padding-inline: 28px; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: safe center; text-align: center; gap: 6px; }
 .center h2 { font-size: 20px; font-weight: 500; margin-top: 24px; }
-.steps { list-style: none; padding: 0; margin-top: 26px; display: flex; flex-direction: column; gap: 14px; text-align: left; }
-.steps li { display: flex; align-items: center; gap: 14px; color: var(--muted); }
+.steps { list-style: none; padding: 0; margin-top: 18px; width: min(560px, 100%); display: flex; flex-direction: column; gap: 12px; text-align: center; }
+.steps li { display: flex; align-items: flex-start; justify-content: center; gap: 12px; color: var(--muted); line-height: 20px; }
+.steps .line { min-width: 0; }
 .steps li.now { color: var(--text); }
-.dot { width: 10px; height: 10px; border-radius: 5px; border: 1.5px solid var(--muted); flex-shrink: 0; margin-inline: 3px; }
+.dot { width: 10px; height: 10px; border-radius: 5px; border: 1.5px solid var(--muted); flex-shrink: 0; margin: 5px 3px 0; }
 .steps .now .dot { background: var(--gold); border-color: var(--border); animation: pulse 1.2s ease-in-out infinite; }
-.steps .done { color: var(--blue); width: 16px; }
+.steps .done { color: var(--blue); width: 16px; flex-shrink: 0; }
 /* 3.2 s loop: tilt left at 0.5 s, right at 1.1 s, upright at 1.7 s, blink at 2.0 s (matches the Paper motion spec) */
 .brick-blink { transform-origin: 50% 85%; animation: tilt 3.2s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
 .brick-blink .eye { transform-origin: center; transform-box: fill-box; animation: blink 3.2s ease-in-out infinite; }

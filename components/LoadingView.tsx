@@ -19,9 +19,9 @@ export function LoadingView({ prompt, progress = [], title = "Designing your rob
       <p className="muted">{prompt}</p>
       {progress.length > 0 ? (
         <ul className="steps" aria-live="polite">
-          {progress.slice(-8).map((line, n, shown) => (
+          {progress.slice(-4).map((line, n, shown) => (
             <li key={progress.length - shown.length + n} className={n === shown.length - 1 ? "now" : undefined}>
-              {n < shown.length - 1 ? <span className="done">✓</span> : <span className="dot" />}{line}
+              {n < shown.length - 1 ? <span className="done">✓</span> : <span className="dot" />}<span className="line">{line}</span>
             </li>
           ))}
         </ul>
@@ -29,7 +29,7 @@ export function LoadingView({ prompt, progress = [], title = "Designing your rob
       <ul className="steps">
         {STEPS.map((s, n) => (
           <li key={s} className={n === i ? "now" : undefined}>
-            {n < i ? <span className="done">✓</span> : <span className="dot" />}{s}
+            {n < i ? <span className="done">✓</span> : <span className="dot" />}<span className="line">{s}</span>
           </li>
         ))}
       </ul>
