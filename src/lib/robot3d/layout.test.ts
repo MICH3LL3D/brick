@@ -67,3 +67,17 @@ test("duplicate parts get distinct keys", () => {
   const l = layoutRobot(["chassis-4wd-m", "md-tb6612", "md-tb6612"].map((id) => byId.get(id)!));
   assert.deepEqual(l.items.map((i) => i.key).sort(), ["md-tb6612", "md-tb6612#2"]);
 });
+
+test("stacked deck parts rest on another part, never above a tank", () => {
+  for (const d of demos) {
+    const l = layoutRobot(partsOf(d));
+    const deck = l.items.filter((i) => i.role === "deck");
+    for (const it of deck) {
+      const bottom = it.pos[1] - it.size[1] / 2;
+      if (Math.abs(bottom - l.deckY) < 1e-6) continue;
+      const support = deck.find((o) => o !== it && Math.abs(o.pos[1] + o.size[1] / 2 + 0.006 - bottom) < 1e-6);
+      assert.ok(support, `${it.key} floats`);
+      assert.ok((support.part.caps.tankMl ?? 0) === 0, `${it.key} sits on a tank`);
+    }
+  }
+});

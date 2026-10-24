@@ -118,20 +118,27 @@ export function layoutRobot(parts: Part[]): RobotLayout {
   let x = -cl / 2 + GAP;
   let z = -cw / 2 + GAP;
   let rowDepth = 0;
-  let level = deckY;
-  let levelHeight = 0;
+  const overflow: Part[] = [];
   for (const p of deckParts) {
     const s = sizeOf(p);
     if (z + s[2] > cw / 2 + 0.001 && z > -cw / 2 + GAP) { x += rowDepth + GAP; z = -cw / 2 + GAP; rowDepth = 0; }
-    if (x + s[0] > xMax + 0.001 && x > -cl / 2 + GAP) {
-      // Deck is full: start a second level on top (real robots use standoffs).
-      level += levelHeight + GAP; levelHeight = 0;
-      x = -cl / 2 + GAP; z = -cw / 2 + GAP; rowDepth = 0;
-    }
-    items.push({ key: keyOf(p), part: p, role: "deck", pos: [x + s[0] / 2, level + s[1] / 2, z + s[2] / 2], size: s });
+    if (x + s[0] > xMax + 0.001) { overflow.push(p); continue; }
+    items.push({ key: keyOf(p), part: p, role: "deck", pos: [x + s[0] / 2, deckY + s[1] / 2, z + s[2] / 2], size: s });
     z += s[2] + GAP;
     rowDepth = Math.max(rowDepth, s[0]);
-    levelHeight = Math.max(levelHeight, s[1]);
+  }
+
+  // Deck full: stack each leftover part on the lowest part whose top it fits on, like boards on
+  // standoffs. Tall parts (tanks) are never used as a base, so nothing floats above them.
+  const tops = items.map((it) => ({ it, top: it.pos[1] + it.size[1] / 2, flat: it.size[1] <= 0.05 }));
+  for (const p of overflow) {
+    const s = sizeOf(p);
+    const fits = (t: (typeof tops)[number]) => t.flat && t.it.size[0] >= s[0] * 0.6 && t.it.size[2] >= s[2] * 0.6;
+    const base = [...tops].filter(fits).sort((m, n) => m.top - n.top)[0] ?? [...tops].sort((m, n) => m.top - n.top)[0];
+    const y = (base?.top ?? deckY) + GAP;
+    const placed: Placed = { key: keyOf(p), part: p, role: "deck", pos: [base ? base.it.pos[0] : 0, y + s[1] / 2, base ? base.it.pos[2] : 0], size: s };
+    items.push(placed);
+    if (base) { base.top = y + s[1]; base.flat = s[1] <= 0.05; }
   }
 
   const top = Math.max(
