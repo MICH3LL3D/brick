@@ -59,3 +59,21 @@ test("USB power bank alone cannot power a Pi 4", () => {
   const d = deriveAndCheck(design(ids), waterTask, room, catalog);
   assert.ok(failed(d).includes("power-supply"), failureText(d));
 });
+
+test("no battery fails with an add-a-battery message", () => {
+  const d = deriveAndCheck(design(MID.filter((id) => id !== "bat-nimh-2200")), waterTask, room, catalog);
+  const b = d.checks.find((c) => c.id === "battery")!;
+  assert.equal(b.ok, false);
+  assert.match(b.message, /no battery/);
+});
+
+test("GPIO overflow fails the pin budget", () => {
+  const ids = [...MID, ...Array(13).fill("us-rcwl1601")]; // 26 GPIO pins with I2C reserved
+  const d = deriveAndCheck(design(ids, 5000), waterTask, room, catalog);
+  assert.ok(failed(d).includes("pin-budget"), failureText(d));
+});
+
+test("missing tank says to add one", () => {
+  const d = deriveAndCheck(design(MID.filter((id) => id !== "tank-500")), waterTask, room, catalog);
+  assert.match(d.checks.find((c) => c.id === "tank")!.message, /no tank/);
+});

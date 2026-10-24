@@ -170,7 +170,9 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
   /* 4. Pin budget + pin map */
   const pinMap: Derived["pinMap"] = [];
   const hasI2c = parts.some((p) => p.caps.interface === "i2c");
-  const gpioAvailable = (controller?.caps.pins ?? PI_GPIO_PINS) - (hasI2c ? 2 : 0);
+  // Without I2C parts, BCM 2/3 are free for plain GPIO too.
+  const gpioOrder = hasI2c ? GPIO_ORDER : [...GPIO_ORDER, 2, 3];
+  const gpioAvailable = Math.min(controller?.caps.pins ?? PI_GPIO_PINS, gpioOrder.length);
   let gpioUsed = 0;
   let pwmChannel = 0;
   let motorChannel = 0;
@@ -194,7 +196,7 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
     }
     const want = p.caps.pins ?? 0;
     for (let i = 0; i < want; i++) {
-      const bcm = GPIO_ORDER[gpioUsed++];
+      const bcm = gpioOrder[gpioUsed++];
       pins.push(bcm === undefined ? "NO PIN LEFT" : `GPIO${bcm}`);
     }
     if (pins.length) pinMap.push({ partId: p.id, pins });
@@ -211,12 +213,15 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
   const pwmParts = parts.filter((p) => p.caps.interface === "pwm");
   const hasServoBoard = parts.some(isServoBoard);
   if (pwmParts.length) {
+    const boardChannels = 16 * parts.filter(isServoBoard).length;
     add(
       "pwm-board",
-      hasServoBoard,
-      hasServoBoard
-        ? `Servo board drives ${pwmChannel} servo channels.`
-        : `${pwmParts.map((p) => p.name).join(", ")} use servos and need a PCA9685 servo driver board; the Pi cannot drive servos reliably itself.`,
+      hasServoBoard && pwmChannel <= boardChannels,
+      !hasServoBoard
+        ? `${pwmParts.map((p) => p.name).join(", ")} use servos and need a PCA9685 servo driver board; the Pi cannot drive servos reliably itself.`
+        : pwmChannel > boardChannels
+          ? `Needs ${pwmChannel} servo channels but the servo board has ${boardChannels}. Add another PCA9685 or use fewer servos.`
+          : `Servo board drives ${pwmChannel} of ${boardChannels} servo channels.`,
     );
   }
 
@@ -249,11 +254,13 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
   const maxA = batteries.reduce((s, p) => s + (p.caps.maxCurrentA ?? 0), 0);
   const volts = Math.max(5, ...batteries.map((b) => b.caps.outputV ?? 0));
   const avgA = drawW / volts;
-  const batteryOk = runtimeMin >= MIN_RUNTIME_MIN && avgA <= maxA;
+  const batteryOk = batteries.length > 0 && runtimeMin >= MIN_RUNTIME_MIN && avgA <= maxA;
   add(
     "battery",
     batteryOk,
-    runtimeMin < MIN_RUNTIME_MIN
+    batteries.length === 0
+      ? "The robot has no battery. Add a battery pack."
+      : runtimeMin < MIN_RUNTIME_MIN
       ? `Batteries hold ${round1(wh)} Wh but the robot draws about ${round1(drawW)} W, so it runs only ${Math.floor(runtimeMin)} minutes (needs ${MIN_RUNTIME_MIN}). Pick a bigger battery.`
       : avgA > maxA
         ? `The robot pulls about ${round1(avgA)}A but the batteries supply at most ${round1(maxA)}A. Pick a battery with a higher current rating.`
@@ -308,7 +315,7 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
     if (!CONTACT_ACTIONS.has(t.action)) continue;
     if (t.heightMm > top) reachFails.push(`${t.label} is ${t.heightMm} mm high but the tool tops out at ${top} mm`);
     const dist = approachDistanceMm(t, room);
-    if (dist > reachH) reachFails.push(`${t.label} is ${Math.round(dist)} mm in from the edge but the arm reaches ${reachH} mm`);
+    if (dist > reachH) reachFails.push(`${t.label} is ${Math.round(dist)} mm in from the edge but the arm reaches only ${reachH - TOOL_ALLOWANCE_MM} mm (plus ${TOOL_ALLOWANCE_MM} mm tool)`);
   }
   add(
     "reach",
@@ -325,7 +332,9 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
       tankMl >= waterMl,
       tankMl >= waterMl
         ? `Tank holds ${tankMl} ml; ${waterTargets.length} plants need ${waterMl} ml.`
-        : `${waterTargets.length} plants need ${waterMl} ml but the tank holds ${tankMl} ml. Use a bigger tank.`,
+        : tankMl === 0
+          ? `${waterTargets.length} plants need ${waterMl} ml of water but there is no tank. Add a water tank.`
+          : `${waterTargets.length} plants need ${waterMl} ml but the tank holds ${tankMl} ml. Use a bigger tank.`,
     );
   }
 
@@ -340,7 +349,7 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
       need > widest
         ? `The robot is ${footprint.w} mm wide and needs ${need} mm to pass, but the widest doorway is ${widest} mm. Use a narrower chassis.`
         : need > narrowest
-          ? `The robot is ${footprint.w} mm wide: it fits the ${widest} mm doorway but not the ${narrowest} mm one.`
+          ? `The robot is ${footprint.w} mm wide: it fits the ${widest} mm doorway but not the ${narrowest} mm one, so it must take the long way (the simulation checks the actual path).`
           : `The robot is ${footprint.w} mm wide and fits every doorway.`,
     );
   }
