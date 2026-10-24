@@ -273,6 +273,8 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .b-list span.ok { background: var(--blue); color: var(--on-red); }
 .b-view { flex: 1; min-width: 0; overflow: auto; padding: 8px 32px 32px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .b-view > * { width: min(100%, 760px); }
+.b-view { position: relative; }
+.b-view > .center { inset: 0; width: auto; }
 .b-chip { display: none; }
 .b-head { display: flex; justify-content: space-between; align-items: baseline; color: var(--muted); font: 400 12px var(--mono); }
 .b-head h2, .b-title { font: 500 18px/22px var(--sans); letter-spacing: -0.02em; color: var(--text); }
