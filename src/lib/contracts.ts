@@ -88,8 +88,8 @@ export const Room = z.object({
 /** What the task physically needs, estimated by Gemini from the prompt alone (no room). All 0/false = not needed. */
 export const Requirements = z.object({
   feasible: z.boolean(),                                // can a small wheeled robot do this at all?
-  notes: z.string(),                                    // honest limitations, plain English
-  actions: z.array(z.string()),                         // short verbs: "pick up", "carry", "water", "photograph"...
+  notes: z.string().max(600),                           // honest limitations, plain English
+  actions: z.array(z.string().max(60)).max(12),         // short verbs: "pick up", "carry", "water", "photograph"...
   reachHeightMm: z.number().min(0),                     // highest point the tool must reach, above the floor
   reachOutMm: z.number().min(0),                        // how far past the robot's front the tool must reach
   gripWidthMm: z.number().min(0),                       // object width the gripper must open to
