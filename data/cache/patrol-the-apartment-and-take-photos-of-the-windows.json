@@ -1,0 +1,57 @@
+{
+  "prompt": "Patrol the apartment and take photos of the windows",
+  "recordedAt": "2026-10-24T18:09:10.000Z",
+  "origin": "hand-built",
+  "task": {
+    "prompt": "Patrol the apartment and take photos of the windows",
+    "targetIds": [
+      "window-living",
+      "window-office"
+    ]
+  },
+  "design": {
+    "summary": "A light 2-wheel patroller with a wide camera that snaps both windows.",
+    "partIds": [
+      "chassis-2wd-m",
+      "pi4b-4gb",
+      "md-tb6612",
+      "cam-pi3-wide",
+      "us-rcwl1601",
+      "bat-nimh-2200",
+      "reg-5v-3a"
+    ],
+    "reasons": {
+      "chassis-2wd-m": "A small round base turns in place and fits the narrow doorway easily.",
+      "pi4b-4gb": "Runs the camera and driving code at the lower price.",
+      "md-tb6612": "A cheap dual driver is all two wheels need.",
+      "cam-pi3-wide": "The 120 degree lens gets a whole window in one shot.",
+      "us-rcwl1601": "Spots walls and furniture so the robot stops in time.",
+      "bat-nimh-2200": "Enough charge for a full lap of the apartment.",
+      "reg-5v-3a": "Gives the Pi a steady 5V 3A from the battery."
+    },
+    "routine": [
+      {
+        "op": "goto",
+        "target": "window-living"
+      },
+      {
+        "op": "photograph",
+        "target": "window-living"
+      },
+      {
+        "op": "goto",
+        "target": "window-office"
+      },
+      {
+        "op": "photograph",
+        "target": "window-office"
+      },
+      {
+        "op": "return_home"
+      }
+    ],
+    "budgetUsd": 300
+  },
+  "attempts": 1,
+  "repairNotes": []
+}

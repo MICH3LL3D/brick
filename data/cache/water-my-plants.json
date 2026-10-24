@@ -1,0 +1,104 @@
+{
+  "prompt": "Water my plants",
+  "recordedAt": "2026-10-24T18:14:52.408Z",
+  "origin": "gemini",
+  "task": {
+    "prompt": "Water my plants",
+    "targetIds": [
+      "plant-floor",
+      "plant-table",
+      "plant-shelf"
+    ]
+  },
+  "design": {
+    "summary": "A 4WD mobile robot equipped with a linear actuator lift arm and submersible pump system to water plants on the floor, table, and high shelf.",
+    "partIds": [
+      "chassis-4wd-m",
+      "pi4b-4gb",
+      "md-motor-hat",
+      "arm-lact10p",
+      "tool-pump-submersible",
+      "tank-500",
+      "bat-nimh-2200",
+      "reg-5v-3a"
+    ],
+    "reasons": {
+      "chassis-4wd-m": "Provides a sturdy 4WD base with a 3000g payload capacity to carry the heavy linear actuator mast and water tank.",
+      "pi4b-4gb": "Serves as the main robot controller for processing and controlling hardware.",
+      "md-motor-hat": "Provides 4 motor drive channels over I2C to control wheels, linear actuator mast, and water pump.",
+      "arm-lact10p": "Gives a 606mm vertical lift to reach the high plant shelf at 650mm height.",
+      "tool-pump-submersible": "Compact DC submersible pump to deliver water from the tank to each plant.",
+      "tank-500": "Holds 500ml of water, providing more than enough capacity to deliver 100ml to each of the three plants.",
+      "bat-nimh-2200": "7.2V rechargeable battery pack delivering ample current and over 40 minutes of runtime.",
+      "reg-5v-3a": "Steps down 7.2V battery output to a stable 5V at up to 3.2A to power the Raspberry Pi."
+    },
+    "routine": [
+      {
+        "op": "goto",
+        "target": "plant-floor"
+      },
+      {
+        "op": "extend_arm"
+      },
+      {
+        "op": "pump_on"
+      },
+      {
+        "op": "wait",
+        "value": 7
+      },
+      {
+        "op": "pump_off"
+      },
+      {
+        "op": "retract_arm"
+      },
+      {
+        "op": "goto",
+        "target": "plant-table"
+      },
+      {
+        "op": "extend_arm"
+      },
+      {
+        "op": "pump_on"
+      },
+      {
+        "op": "wait",
+        "value": 7
+      },
+      {
+        "op": "pump_off"
+      },
+      {
+        "op": "retract_arm"
+      },
+      {
+        "op": "goto",
+        "target": "plant-shelf"
+      },
+      {
+        "op": "extend_arm"
+      },
+      {
+        "op": "pump_on"
+      },
+      {
+        "op": "wait",
+        "value": 7
+      },
+      {
+        "op": "pump_off"
+      },
+      {
+        "op": "retract_arm"
+      },
+      {
+        "op": "return_home"
+      }
+    ],
+    "budgetUsd": 500
+  },
+  "attempts": 1,
+  "repairNotes": []
+}

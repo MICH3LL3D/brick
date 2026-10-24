@@ -1,5 +1,6 @@
 // The ONLY place Gemini model ids appear. Verified against
 // https://ai.google.dev/gemini-api/docs/models on 2026-10-24 (all listed as stable).
+// gemini-4-argon returned 429 (quota) on our key on 2026-10-24.
 // Do not use gemini-2.5-*, gemini-3-pro-preview, or -latest aliases.
 
 export const MODELS = {
@@ -7,6 +8,7 @@ export const MODELS = {
   CHAT: "gemini-3.8-flash",
   CATALOG_SCRAPE: "gemini-3.8-flash", // used with Google Search grounding
   CHEAP: "gemini-3.5-flash-lite",     // assembly manual text
+  FALLBACK: "gemini-3.6-flash",       // used when the primary is slow or overloaded (seen 2026-10-24)
 } as const;
 
 export type ModelRole = keyof typeof MODELS;
