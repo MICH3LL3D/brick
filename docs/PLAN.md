@@ -56,6 +56,7 @@ Every file has one owner. To change someone else's file: message them, or open a
 | Catalog, sample room, catalog scrape script | **B** | `data/catalog.json`, `data/room.json`, `scripts/scrape-catalog.ts` |
 | Build kit (templates, py_compile gate, manual text) | **B** | `app/api/kit/`, `src/lib/kit/` |
 | Demo mode cache | **B** | `data/cache/*.json`, `DEMO_MODE=1` |
+| Baseline tools and supplies list (always in the cart, kept out of the Gemini catalog) | **A** | `data/supplies.json`, `src/lib/supplies.ts` |
 | Thin routes: rebudget, catalog, room | **A** | `app/api/rebudget/`, `app/api/catalog/`, `app/api/room/` |
 | Shared contracts | **Both** (change only after telling the other) | `src/lib/contracts.ts` |
 | Docs | Both, own sections | `docs/` |
