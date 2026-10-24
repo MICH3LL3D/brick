@@ -1,4 +1,4 @@
-// POST /api/chat { messages, design, task } -> { reply, actions: ChatAction[], source }
+// POST /api/chat { messages, design, task, limitations? } -> { reply, actions: ChatAction[], source }
 import { z } from "zod";
 import { ChatMessage, chat, offlineChat } from "@/lib/chat";
 import { Design, Task } from "@/lib/contracts";
@@ -9,6 +9,8 @@ const Body = z.object({
   messages: z.array(ChatMessage).min(1).max(50),
   design: Design,
   task: Task,
+  // From /api/generate; capped so a client cannot stuff the prompt.
+  limitations: z.array(z.string().max(300)).max(10).optional(),
 });
 
 export async function POST(request: Request) {
@@ -16,17 +18,17 @@ export async function POST(request: Request) {
   if (!body.success) {
     return Response.json({ error: "Send { messages, design, task }." }, { status: 400 });
   }
-  const { messages, design, task } = body.data;
+  const { messages, design, task, limitations } = body.data;
   const room = loadRoom();
   const catalog = loadCatalog();
 
   if (isDemoMode() || !hasGeminiKey()) {
-    return Response.json(offlineChat(messages, design, task, room, catalog));
+    return Response.json(offlineChat(messages, design, task, room, catalog, limitations));
   }
   try {
-    return Response.json(await chat(messages, design, task, room, catalog));
+    return Response.json(await chat(messages, design, task, room, catalog, limitations));
   } catch (e) {
     console.error("[chat]", e);
-    return Response.json(offlineChat(messages, design, task, room, catalog));
+    return Response.json(offlineChat(messages, design, task, room, catalog, limitations));
   }
 }

@@ -2,7 +2,7 @@ import type { Design, Part } from "./contracts";
 import { SAMPLE_MANUALS } from "./manual-sample";
 import { ManualSet, type ManualSetT } from "./manual-format";
 import { loadCatalog, loadRoom } from "./data";
-import { stubResult, type Result, type RoomT } from "./stub";
+import { stubResult, type Result, type RoomT, type TaskT } from "./stub";
 
 // shortcut: each call falls back to stub data when the route is missing or fails; drop the fallbacks once /api is live.
 async function post<T>(url: string, body: unknown, fallback: () => T): Promise<T> {
@@ -76,10 +76,12 @@ export async function getManuals(design: Design | null, prompt: string): Promise
 }
 
 /** Sprocket in the Build view. Uses POST /api/chat; says so plainly when it can't answer. */
-export async function askSprocket(messages: { role: "user" | "assistant"; content: string }[], design: Design | null, prompt: string): Promise<string> {
+export type RobotContext = { task?: TaskT; limitations?: string[] };
+
+export async function askSprocket(messages: { role: "user" | "assistant"; content: string }[], design: Design | null, prompt: string, robot?: RobotContext): Promise<string> {
   if (!design) return "Generate a robot in Design mode first, then I can help with its build.";
   try {
-    const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages, design, task: { prompt, targetIds: [] } }) });
+    const res = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages, design, task: robot?.task ?? { prompt, targetIds: [] }, limitations: robot?.limitations }) });
     if (!res.ok) throw new Error(String(res.status));
     return (await res.json()).reply as string;
   } catch {

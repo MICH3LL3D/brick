@@ -110,3 +110,27 @@ test("set_budget outside $50-$500 is rejected", () => {
   assert.deepEqual(r.actions, []);
   assert.match(r.reply, /\$50 to \$500/);
 });
+
+/* ---------- room-free designs (task.requirements) ---------- */
+
+const reqTask = {
+  prompt: "grab books from the shelf",
+  targetIds: [],
+  requirements: {
+    feasible: true, notes: "Light paperbacks only.", actions: ["pick up"], reachHeightMm: 1000, reachOutMm: 0, gripWidthMm: 40,
+    liftMassG: 300, carryMassG: 0, liquidMl: 0, needsCamera: false, needsDistanceSensor: false, maxWidthMm: 0, runtimeMin: 0,
+  },
+};
+
+test("offline with requirements: 'why this arm?' cites the task's reach", () => {
+  const hasArm = design.partIds.some((id) => catalog.find((p) => p.id === id)?.category === "arm");
+  const armDesign: Design = hasArm ? design : { ...design, partIds: [...design.partIds, catalog.find((p) => p.category === "arm")!.id] };
+  const r = offlineChat(user("why this arm?"), armDesign, reqTask, room, catalog);
+  assert.match(r.reply, /reach 1,000 mm high/);
+});
+
+test("offline with requirements: limitations are quoted, and old tasks still answer", () => {
+  const r = offlineChat(user("what can't it do?"), design, reqTask, room, catalog, ["No catalog part can handle lifting 5000 g."]);
+  assert.match(r.reply, /5000 g/);
+  assert.ok(ask("why this arm?").reply.length > 0);
+});

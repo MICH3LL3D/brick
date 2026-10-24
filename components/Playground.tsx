@@ -155,7 +155,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
 
   // Build with no robot yet still opens the sample manuals so the shelf and legend are reachable.
   if (mode === "build") {
-    return manuals ? <BuildView manuals={manuals} design={current?.design ?? null} prompt={prompt} onMode={setMode} /> : <div className="app" />;
+    return manuals ? <BuildView manuals={manuals} design={current?.design ?? null} prompt={prompt} onMode={setMode} robot={current ? { task: current.task, limitations: current.limitations } : undefined} /> : <div className="app" />;
   }
 
   return (
@@ -218,7 +218,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
             </>
           )}
           {!busy && current && tab === "sim" && <SimView room={room} sim={current.sim} />}
-          {!busy && current && checksOpen && <ChecksPanel derived={current.derived} onLimits={() => setLimitsOpen(!limitsOpen)} />}
+          {!busy && current && checksOpen && <ChecksPanel derived={current.derived} requirements={current.task?.requirements} limitations={current.limitations} onLimits={() => setLimitsOpen(!limitsOpen)} />}
           {undo && (
             <div className="toast" role="status">Part removed <button onClick={restorePart}>Undo</button></div>
           )}

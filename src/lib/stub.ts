@@ -1,14 +1,17 @@
 // Stand-in data typed by contracts.ts, used until B's /api routes land. Delete once they do.
 import type { z } from "zod";
 import type { Design, Part } from "./contracts";
-import { Check, Derived, Room, SimResult } from "./contracts";
+import { Check, Derived, Room, SimResult, Task } from "./contracts";
 
 export type Checks = z.infer<typeof Check>;
 export type DerivedT = z.infer<typeof Derived>;
 export type RoomT = z.infer<typeof Room>;
 export type SimT = z.infer<typeof SimResult>;
 
-export type Result = { design: Design; derived: DerivedT; sim: SimT };
+export type TaskT = z.infer<typeof Task>;
+
+// task and limitations come from /api/generate; older cached results may lack them.
+export type Result = { design: Design; derived: DerivedT; sim: SimT; task?: TaskT; limitations?: string[] };
 
 const part = (id: string, category: Part["category"], name: string, priceUsd: number, vendor: string, verified: boolean, caps: Part["caps"] = {}): Part => ({
   id, category, name, priceUsd, vendor, verified, caps,
