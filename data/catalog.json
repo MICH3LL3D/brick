@@ -20,12 +20,13 @@
       "wheelDiameterMm": 65,
       "drawW": 4,
       "pins": 0,
-      "interface": "none"
+      "interface": "none",
+      "stallA": 0.65
     },
     "mounts": [
       "deck"
     ],
-    "notes": "Two small brushed DC motors rated about 3-6V. Drive them from a motor driver, never straight from Pi GPIO. Give the motors their own battery; share only ground with the Pi."
+    "notes": "Two small brushed DC motors rated about 3-6V. Drive them from a motor driver, never straight from Pi GPIO. Give the motors their own battery; share only ground with the Pi. Stall 0.65 A per motor at 6V (Adafruit product 2941); one motor per channel."
   },
   {
     "id": "chassis-2wd-m",
@@ -48,12 +49,13 @@
       "wheelDiameterMm": 70,
       "drawW": 5,
       "pins": 0,
-      "interface": "none"
+      "interface": "none",
+      "stallA": 2
     },
     "mounts": [
       "deck"
     ],
-    "notes": "Round 165 mm differential-drive base with a built-in 6x AA battery holder. Mini plastic gearmotors included. Use a dual H-bridge driver; motors need their own supply."
+    "notes": "Round 165 mm differential-drive base with a built-in 6x AA battery holder. Mini plastic gearmotors included. Use a dual H-bridge driver; motors need their own supply. Pololu lists 1.25 A stall per motor at 4.5V; at the 7.2V of 6x AA it is about 2 A per channel (estimate)."
   },
   {
     "id": "chassis-4wd-m",
@@ -76,12 +78,13 @@
       "wheelDiameterMm": 65,
       "drawW": 8,
       "pins": 0,
-      "interface": "none"
+      "interface": "none",
+      "stallA": 5.6
     },
     "mounts": [
       "deck"
     ],
-    "notes": "Four DC gearmotors. Wire each side's two motors in parallel so a dual driver (2 channels) can steer it. Four motors stalling can pull several amps: size the driver and motor battery for that. Payload is an estimate; vendor page does not state it clearly."
+    "notes": "Four DC gearmotors. Wire each side's two motors in parallel so a dual driver (2 channels) can steer it. Four motors stalling can pull several amps: size the driver and motor battery for that. Payload is an estimate; vendor page does not state it clearly. TT motors stall at 2.8 A each (DFRobot FIT0016); two in parallel per side is 5.6 A per driver channel."
   },
   {
     "id": "chassis-4wd-l",
@@ -332,7 +335,8 @@
       "armPayloadG": 50,
       "drawW": 2,
       "pins": 0,
-      "interface": "pwm"
+      "interface": "pwm",
+      "servoCount": 4
     },
     "mounts": [
       "deck"
@@ -362,7 +366,8 @@
       "armPayloadG": 200,
       "drawW": 4,
       "pins": 0,
-      "interface": "pwm"
+      "interface": "pwm",
+      "servoCount": 4
     },
     "mounts": [
       "deck"
@@ -392,12 +397,15 @@
       "armPayloadG": 2000,
       "drawW": 6,
       "pins": 0,
-      "interface": "gpio"
+      "interface": "gpio",
+      "stallA": 7,
+      "speedMmS": 12.3,
+      "feedback": "pot"
     },
     "mounts": [
       "deck"
     ],
-    "notes": "Extendable arm: mount vertically as a lift mast, about 356 mm retracted plus 250 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: power it from 3.3V and read the wiper through an ADS1115, not a Pi pin. Reach range assumes a small servo wrist on top (estimate)."
+    "notes": "Extendable arm: mount vertically as a lift mast, about 356 mm retracted plus 250 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: power it from 3.3V and read the wiper through an ADS1115, not a Pi pin. Reach range assumes a small servo wrist on top (estimate). Pololu: 12.3 mm/s at max load, about 1 A no load, 7 A stall at 12V."
   },
   {
     "id": "arm-lact12p",
@@ -422,12 +430,15 @@
       "armPayloadG": 2000,
       "drawW": 6,
       "pins": 0,
-      "interface": "gpio"
+      "interface": "gpio",
+      "stallA": 7,
+      "speedMmS": 12.3,
+      "feedback": "pot"
     },
     "mounts": [
       "deck"
     ],
-    "notes": "Extendable arm: mount vertically as a lift mast, about 394 mm retracted plus 300 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: power it from 3.3V and read the wiper through an ADS1115. Reach range assumes a small servo wrist on top (estimate)."
+    "notes": "Extendable arm: mount vertically as a lift mast, about 394 mm retracted plus 300 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Feedback potentiometer is analog: power it from 3.3V and read the wiper through an ADS1115. Reach range assumes a small servo wrist on top (estimate). Pololu: 12.3 mm/s at max load, about 1 A no load, 7 A stall at 12V."
   },
   {
     "id": "arm-lact4p",
@@ -452,12 +463,15 @@
       "armPayloadG": 1500,
       "drawW": 5,
       "pins": 0,
-      "interface": "gpio"
+      "interface": "gpio",
+      "stallA": 7,
+      "speedMmS": 16,
+      "feedback": "pot"
     },
     "mounts": [
       "deck"
     ],
-    "notes": "Extendable arm: about 210 mm retracted plus 100 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Analog feedback: power the pot from 3.3V and read it via ADS1115."
+    "notes": "Extendable arm: about 210 mm retracted plus 100 mm stroke. 12V DC motor: needs one motor driver channel and a 12V supply. Analog feedback: power the pot from 3.3V and read it via ADS1115. Pololu: 16 mm/s max (0.6 in/s), about 1 A no load, 3 A at max load, 7 A stall at 12V; 10k pot."
   },
   {
     "id": "tool-gripper",
@@ -477,7 +491,8 @@
       "gripMaxMm": 75,
       "drawW": 1.5,
       "pins": 0,
-      "interface": "pwm"
+      "interface": "pwm",
+      "servoCount": 1
     },
     "mounts": [
       "tool_mount"
@@ -553,7 +568,8 @@
       "pumpMlPerS": 1.2,
       "drawW": 3,
       "pins": 0,
-      "interface": "pwm"
+      "interface": "pwm",
+      "servoCount": 1
     },
     "mounts": [
       "tool_mount",
@@ -578,7 +594,8 @@
     "caps": {
       "drawW": 1,
       "pins": 0,
-      "interface": "pwm"
+      "interface": "pwm",
+      "servoCount": 2
     },
     "mounts": [
       "deck",
@@ -973,14 +990,17 @@
       },
       "liftMaxMm": 1359,
       "armPayloadG": 2500,
-      "drawW": 6,
+      "drawW": 12,
       "pins": 0,
-      "interface": "gpio"
+      "interface": "gpio",
+      "stallA": 5,
+      "speedMmS": 35,
+      "feedback": "pot"
     },
     "mounts": [
       "deck"
     ],
-    "notes": "Extendable arm: mount vertically as a lift mast. Vendor table: 29.51\" (750 mm) retracted, 53.51\" (1359 mm) extended, 3.75 lb, 2.0\"/s no load, 1 A no load / 5 A full load, 25% duty cycle. 12V DC motor: needs a 12V supply and one motor driver channel rated 5 A or more (the TB6612 and DRV8833 are too small; use the Dual G2). Built-in potentiometer feedback is analog: power it from 3.3V and read the wiper through an ADS1115. A 750 mm mast on a small chassis tips easily: use the large 4WD chassis, mount it low and centred, and move slowly when extended. Payload 2500 g is an estimate limited by tipping and rod side-load, not the 35 lb motor force. Reach range assumes a small servo wrist on top (estimate)."
+    "notes": "Extendable arm: mount vertically as a lift mast. Vendor table: 29.51\" (750 mm) retracted, 53.51\" (1359 mm) extended, 3.75 lb, 2.0\"/s no load, 1 A no load / 5 A full load, 25% duty cycle. 12V DC motor: needs a 12V supply and one motor driver channel rated 5 A or more (the TB6612 and DRV8833 are too small; use the Dual G2). Built-in potentiometer feedback is analog: power it from 3.3V and read the wiper through an ADS1115. A 750 mm mast on a small chassis tips easily: use the large 4WD chassis, mount it low and centred, and move slowly when extended. Payload 2500 g is an estimate limited by tipping and rod side-load, not the 35 lb motor force. Reach range assumes a small servo wrist on top (estimate). Speed 35 mm/s is the vendor full-load figure (1.38 in/s; 51 mm/s no load). stallA uses the 5 A full-load rating because no stall figure is published (estimate; size the channel with margin). drawW is 1 A no-load at 12V."
   },
   {
     "id": "arm-pa09-18",
@@ -1003,14 +1023,17 @@
       },
       "liftMaxMm": 1060,
       "armPayloadG": 3000,
-      "drawW": 8,
+      "drawW": 18,
       "pins": 2,
-      "interface": "gpio"
+      "interface": "gpio",
+      "stallA": 4,
+      "speedMmS": 6.9,
+      "feedback": "hall"
     },
     "mounts": [
       "deck"
     ],
-    "notes": "Extendable arm: mount vertically as a lift mast. Vendor table: 23.75\" (603 mm) retracted, 41.75\" (1060 mm) extended, 4.2 lb, 0.39\"/s no load (slow: about 47 s for full stroke), up to 1.5 A no load / 4 A full load at 12V, 25% duty cycle, IP66. 12V DC motor: needs a 12V supply and one motor driver channel rated 4 A or more (use the Dual G2, not the TB6612 or DRV8833). Feedback is a Hall-effect pulse sensor, not a pot: count pulses on 2 GPIO pins, and check the sensor supply voltage on the datasheet; if it outputs 5V pulses, level-shift or use open-collector pull-ups to 3.3V before the Pi. Position is relative, so home it against the retracted limit switch at start. Payload 3000 g is an estimate limited by tipping on a wheeled base, not the 330 lb motor force. Reach range assumes a small servo wrist on top (estimate). Dims l/w are estimates."
+    "notes": "Extendable arm: mount vertically as a lift mast. Vendor table: 23.75\" (603 mm) retracted, 41.75\" (1060 mm) extended, 4.2 lb, 0.39\"/s no load (slow: about 47 s for full stroke), up to 1.5 A no load / 4 A full load at 12V, 25% duty cycle, IP66. 12V DC motor: needs a 12V supply and one motor driver channel rated 4 A or more (use the Dual G2, not the TB6612 or DRV8833). Feedback is a Hall-effect pulse sensor, not a pot: count pulses on 2 GPIO pins, and check the sensor supply voltage on the datasheet; if it outputs 5V pulses, level-shift or use open-collector pull-ups to 3.3V before the Pi. Position is relative, so home it against the retracted limit switch at start. Payload 3000 g is an estimate limited by tipping on a wheeled base, not the 330 lb motor force. Reach range assumes a small servo wrist on top (estimate). Dims l/w are estimates. Speed 6.9 mm/s is the vendor full-load figure (0.27 in/s; 10 mm/s no load). stallA uses the 4 A full-load rating because no stall figure is published (estimate). drawW is 1.5 A no-load at 12V."
   },
   {
     "id": "arm-dfr-6dof-metal",
@@ -1035,12 +1058,13 @@
       "armPayloadG": 300,
       "drawW": 8,
       "pins": 0,
-      "interface": "pwm"
+      "interface": "pwm",
+      "servoCount": 6
     },
     "mounts": [
       "deck"
     ],
-    "notes": "Fixed servo arm, 2 mm aluminium, six TD-8125MG servos (about 25 kg-cm each, 500-2500 us PWM). Uses 6 PCA9685 channels. Servos need their own 5-6V supply (vendor lists 4.4-8.4V and more than 2 A); each servo can stall at 2.6-3.4 A, so give the servo rail 10 A or more and never feed it from the Pi. Includes its own gripper (opening not stated). Vendor page lists about 37 cm fully extended but no reach or payload: 300 mm reach, 400 mm lift and 300 g payload are estimates."
+    "notes": "Fixed servo arm, 2 mm aluminium, six TD-8125MG servos (about 25 kg-cm each, 500-2500 us PWM). Uses 6 PCA9685 channels. Servos need their own 5-6V supply (vendor lists 4.4-8.4V and more than 2 A); each servo can stall at 2.6-3.4 A, so the servo rail must handle 20 A or more (6 x about 3 A); pair it with a dedicated 6V pack (for example bat-nimh-6v-3000) and never feed it from the Pi. Includes its own gripper (opening not stated). Vendor page lists about 37 cm fully extended but no reach or payload: 300 mm reach, 400 mm lift and 300 g payload are estimates."
   },
   {
     "id": "tool-gripper-claw-230",
@@ -1060,12 +1084,13 @@
       "gripMaxMm": 150,
       "drawW": 2,
       "pins": 0,
-      "interface": "pwm"
+      "interface": "pwm",
+      "servoCount": 1
     },
     "mounts": [
       "tool_mount"
     ],
-    "notes": "Wide aluminium claw, one hobby servo: drive it from a PCA9685 channel with a separate 5-6V servo supply. Listing says 230 mm maximum tip opening and 1 lb (about 450 g) max grab weight. The jaws swing in an arc, so the usable grip on a box or bag handle is about 150 mm (estimate). Keep lifted objects under about 450 g even if the arm is stronger. Amazon listing, no datasheet."
+    "notes": "Wide aluminium claw, one hobby servo: drive it from a PCA9685 channel with a separate 5-6V servo supply. Listing says 230 mm maximum tip opening and 1 lb (about 450 g) max grab weight. The jaws swing in an arc, so the usable grip on a box or bag handle is about 150 mm (estimate). Keep lifted objects under about 450 g even if the arm is stronger. Amazon listing, no datasheet; verify before buying."
   },
   {
     "id": "tool-gripper-g6-100",
@@ -1085,12 +1110,13 @@
       "gripMaxMm": 100,
       "drawW": 2,
       "pins": 0,
-      "interface": "pwm"
+      "interface": "pwm",
+      "servoCount": 1
     },
     "mounts": [
       "tool_mount"
     ],
-    "notes": "Aluminium claw with a DS3120MG servo (listing: 21.5 kg-cm, 500-2500 us PWM, grips objects 20-100 mm). Drive it from a PCA9685 channel with a separate 5-6V servo supply; a 20 kg servo can stall above 2 A. Mass and dims are estimates (listing gives 1.1 lb shipping weight and about 150 mm width when open). Amazon listing, no datasheet."
+    "notes": "Aluminium claw with a DS3120MG servo (listing: 21.5 kg-cm, 500-2500 us PWM, grips objects 20-100 mm). Drive it from a PCA9685 channel with a separate 5-6V servo supply; a 20 kg servo can stall above 2 A. Mass and dims are estimates (listing gives 1.1 lb shipping weight and about 150 mm width when open). Amazon listing, no datasheet; verify before buying."
   },
   {
     "id": "tank-2800",
@@ -1137,7 +1163,7 @@
     "mounts": [
       "deck"
     ],
-    "notes": "Open plastic carry bin for the deck, for items the robot ferries. Bolt or zip-tie it through the weave to the chassis plate. It is longer than small chassis (283 mm), so it overhangs anything but the large 4WD base. No electronics. Mass is an estimate. Load in the bin counts against the chassis payload."
+    "notes": "Open plastic carry bin for the deck, for items the robot ferries. Bolt or zip-tie it through the weave to the chassis plate. It is longer than small chassis (283 mm), so it overhangs anything but the large 4WD base. No electronics. Mass is an estimate. Load in the bin counts against the chassis payload. Amazon listing, no datasheet; verify before buying."
   },
   {
     "id": "bat-nimh-12v-3000",
@@ -1156,13 +1182,13 @@
     "caps": {
       "batteryWh": 36,
       "outputV": 12,
-      "maxCurrentA": 20,
+      "maxCurrentA": 10,
       "interface": "none"
     },
     "mounts": [
       "deck"
     ],
-    "notes": "12V motor and actuator supply (10 sub-C NiMH cells, 16 AWG, inline 20 A blade fuse). Use it for 12V linear actuators and 12V chassis motors through a driver rated for 12V (Dual G2 or the motor HAT, not the DRV8833). Feed the Pi through a 5V step-down regulator, never directly. Needs a NiMH charger with an XT30 lead. 20 A is the fuse rating, not a datasheet discharge rating. Dims are an estimate."
+    "notes": "12V motor and actuator supply (10 sub-C NiMH cells, 16 AWG, inline 20 A blade fuse). Use it for 12V linear actuators through the Dual G2 driver (md-g2-24v14); the motor HAT (1.2 A per channel) and DRV8833 are too small. Feed the Pi through a 5V step-down regulator, never directly. Needs a NiMH charger with an XT30 lead. No continuous discharge rating is published: maxCurrentA 10 A is a conservative estimate for 3000 mAh NiMH (the 20 A figure is only the fuse). Dims are an estimate."
   },
   {
     "id": "bat-nimh-6v-3000",
@@ -1181,12 +1207,12 @@
     "caps": {
       "batteryWh": 18,
       "outputV": 6,
-      "maxCurrentA": 20,
+      "maxCurrentA": 10,
       "interface": "none"
     },
     "mounts": [
       "deck"
     ],
-    "notes": "Dedicated servo supply: wire it to the PCA9685 V+ terminal (6V suits metal-gear servos) and share only ground with the Pi. Good for big servo arms whose servos stall at 2-3 A each. Too low for 12V actuators. Needs a NiMH charger. Mass and dims are estimates; 20 A is the fuse rating."
+    "notes": "Dedicated servo supply: wire it to the PCA9685 V+ terminal (6V suits metal-gear servos) and share only ground with the Pi. Good for big servo arms whose servos stall at 2-3 A each. Too low for 12V actuators. Needs a NiMH charger. Mass and dims are estimates; No continuous discharge rating is published: maxCurrentA 10 A is a conservative estimate for 3000 mAh NiMH (the 20 A figure is only the fuse)."
   }
 ]
