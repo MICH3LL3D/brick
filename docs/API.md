@@ -9,7 +9,7 @@ Request: `{ prompt: string (1-500 chars), budgetUsd: number (50-500) }`
 Response 200: `{ task, design, derived, sim, ok, attempts, repairNotes, source, cacheOrigin? }`
 
 - `ok` *(extra)*: false means repairs ran out. Show the failed items in `derived.checks`; never hide them.
-- `attempts` *(extra)*: 1-3. `repairNotes` *(extra)*: the failure text sent back to Gemini on each repair. Good for a "Sprocket fixed 2 problems" note.
+- `attempts` *(extra)*: 1-3. `repairNotes` *(extra)*: the failure text sent back to Gemini on each repair. Good for a "Brick fixed 2 problems" note.
 - `source` *(extra)*: `"gemini"` or `"cache"`. `cacheOrigin` is `"gemini"` for recorded runs.
 - Takes 5-50 s. Gemini was overloaded today, so the fallback models are often used. Show progress text.
 

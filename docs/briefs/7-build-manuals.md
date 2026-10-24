@@ -4,7 +4,7 @@ Owner: A (UX/frontend) for the viewer. B for the generator.
 
 ## What this is
 
-Build mode is a second mode next to Design (switch in the top bar). It shows the robot's build manuals as a shelf of 12 books and 37 pages, with a Sprocket chat panel that knows which page the reader is on.
+Build mode is a second mode next to Design (switch in the top bar). It shows the robot's build manuals as a shelf of 12 books and 37 pages, with a Brick chat panel that knows which page the reader is on.
 
 The page formats are fixed in `src/lib/manual-format.ts` (zod schema). `src/lib/manual-sample.ts` holds hand-written sample content so the viewer works today.
 
@@ -41,12 +41,12 @@ Page counts come from the design: a robot with no arm gets no arm book content. 
 
 - A SEE tag to a Skills page opens it with a "Back to Book N" return, and the list marks where the reader came from.
 - Progress (pages marked done) is kept in the browser only (`localStorage`).
-- Sprocket uses `POST /api/chat`. The server has no page-context field yet, so the viewer prefixes the last message with `[Reader is on Book 3, page 2]`.
+- Brick uses `POST /api/chat`. The server has no page-context field yet, so the viewer prefixes the last message with `[Reader is on Book 3, page 2]`.
 
 ## Open for B
 
 1. ~~`POST /api/manual`~~ Built: see "Manual generator" below.
-2. A `page` context field on `/api/chat`, and an `open_page {book, page}` action so Sprocket can jump the reader to a page.
+2. A `page` context field on `/api/chat`, and an `open_page {book, page}` action so Brick can jump the reader to a page.
 3. Older v1 "Build manual" pages (00 to 13) in Paper are superseded by this layout.
 
 ## Manual generator (built)

@@ -14,7 +14,7 @@ Non-technical people who want a robot for a job, and robotics hobbyists who want
 5. Simulation: hand-authored sample apartment, top-down view, robot drives along an A* path, visits targets (water, pickup, drop, photograph, touch), shows green/red events with reasons, battery use, duration.
 6. Budget slider ($50-$500): deterministic rebudget (cheapest valid parts, then best upgrade per dollar). Runs live with no Gemini call. A cheap build visibly fails the high-shelf plant; a pricier extendable arm fixes it.
 7. Buy list: parts with vendor links, prices, a reason for each part, a verified badge, totals, CSV download.
-8. Chatbot (placeholder name Sprocket): explains choices, answers "why", and edits the design through function calls (set budget, swap part, regenerate). Says "I'm not sure" rather than guessing prices.
+8. Chatbot (placeholder name Brick): explains choices, answers "why", and edits the design through function calls (set budget, swap part, regenerate). Says "I'm not sure" rather than guessing prices.
 9. Build kit zip: buy-list.csv, wiring.md, Raspberry Pi Python (gpiozero, template-generated, compile-checked), selftest.py, README, and a printable assembly manual.
 10. Catalog: built with Gemini + search grounding over reliable vendors, each entry unverified until a human spot-checks it.
 11. Demo mode: cached results for the 3 demo prompts so the demo survives bad wifi.

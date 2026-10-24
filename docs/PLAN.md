@@ -16,7 +16,7 @@ A **web app**. The user types a task in plain English ("water my plants"). Gemin
 2. A simulation of the robot doing the task in a sample apartment (top-down, A* path, green/red events).
 3. A buy list with vendor links, prices, a reason per part, verified badges, CSV download.
 4. A budget slider ($50-$500) that reshapes the design live, with no Gemini call.
-5. A chatbot (placeholder name **Sprocket**) that explains choices and edits the design through function calls.
+5. A chatbot (placeholder name **Brick**) that explains choices and edits the design through function calls.
 6. A build kit zip: buy list, wiring, Pi Python code, self-test, README, printable assembly manual.
 
 The demo must survive bad wifi. Optimize for a reliable 3-minute demo, not production robustness.
@@ -33,7 +33,7 @@ Demo prompts: "Water my plants", "Bring my water bottle from the desk to the cou
 | Robot type | Wheeled only (2 or 4 wheels). Fixed or extendable arms. No legs, no flying. |
 | Who does what | Gemini picks parts and writes reasons. Code does all math, checks and simulation. |
 | Parts | Gemini may only return catalog part ids. Invalid ids are rejected and retried (max 2 repairs, failures shown to the user). |
-| Naming | Product name is brick. One constant string in one place (`src/lib/brand.ts`). Chatbot: Sprocket. |
+| Naming | Product name is brick. One constant string in one place (`src/lib/brand.ts`). Chatbot: Brick. |
 | Frontend design | Designed in **Paper** first, then built. See section 7. |
 | UI colors | Green (sage) buttons and fills always carry white/beige-white text and icons (`#FBF8F3`), never dark text. |
 | Data | JSON files. No database. |
@@ -98,7 +98,7 @@ If behind at 1:30: drop the printable manual styling and the IMU/extra sensors f
 2. Simulation runs. The high-shelf plant fails on a cheap build (red, with the reason).
 3. Drag the slider up. A pricier extendable arm appears and the plant turns green. No Gemini call.
 4. Open the buy list. Show verified badges, reasons, CSV.
-5. Ask Sprocket "why this arm?" then "make it cheaper".
+5. Ask Brick "why this arm?" then "make it cheaper".
 6. Download the build kit. State plainly that it is untested on hardware.
 
 Fallbacks: `DEMO_MODE=1` cached results if wifi fails. Backup screen recording as last resort.
@@ -117,7 +117,7 @@ Design in Paper before building. Frames to produce, at **1280 px wide** (judges 
 3. **Loading state** with plain progress text ("Picking parts...", "Checking power...").
 4. **Failed-check state**: a failed check is plain English and never hidden.
 5. **Cart drawer** (the buy list): per-robot parts with thumbnail, vendor, verified, price, listing link, subtotal, budget bar, CSV button.
-6. **Chat panel** with Sprocket: small friendly avatar, short bubbles, a note when an action changed the design.
+6. **Chat panel** with Brick: small friendly avatar, short bubbles, a note when an action changed the design.
 7. **Limitations popover**: kit untested on hardware, prices from vendor pages at scrape time, LiDAR scan is future work.
 
 Design rules:
