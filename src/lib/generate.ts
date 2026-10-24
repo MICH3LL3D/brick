@@ -63,7 +63,7 @@ function responseSchema(catalog: Part[], room: Room) {
   };
 }
 
-const GeminiDesign = z.object({
+export const GeminiDesign = z.object({
   targetIds: z.array(z.string()),
   summary: z.string(),
   partIds: z.array(z.string()).min(1),
@@ -124,7 +124,7 @@ function userPrompt(prompt: string, budgetUsd: number): string {
 
 /* ---------- Pipeline ---------- */
 
-type Attempt = { task: Task; design: Design; derived: Derived; failed: number };
+export type Attempt = { task: Task; design: Design; derived: Derived; failed: number };
 
 export async function generateDesign(prompt: string, budgetUsd: number, room: Room, catalog: Part[]): Promise<GenerateResult> {
   const contents: Content[] = [{ role: "user", parts: [{ text: userPrompt(prompt, budgetUsd) }] }];
@@ -175,7 +175,7 @@ export async function generateDesign(prompt: string, budgetUsd: number, room: Ro
   return { task: best.task, design: best.design, derived: best.derived, sim, ok: best.failed === 0, attempts, repairNotes, source: "gemini" };
 }
 
-function toAttempt(g: z.infer<typeof GeminiDesign>, prompt: string, budgetUsd: number, room: Room, catalog: Part[]): Attempt {
+export function toAttempt(g: z.infer<typeof GeminiDesign>, prompt: string, budgetUsd: number, room: Room, catalog: Part[]): Attempt {
   const reasons: Record<string, string> = {};
   for (const r of g.reasons) if (g.partIds.includes(r.partId)) reasons[r.partId] = r.reason;
   const design = Design.parse({ summary: g.summary, partIds: g.partIds, reasons, routine: g.routine, budgetUsd });

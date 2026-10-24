@@ -122,11 +122,23 @@ export async function chat(messages: ChatMessage[], design: Design, task: Task, 
     { primaryTimeoutMs: 15_000, fallbackTimeoutMs: 30_000 },
   );
 
+  // Read text parts directly: res.text warns when the reply also has function calls.
+  const text = (res.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
+  return { ...postProcess(text, res.functionCalls ?? [], design, task, room, catalog), source: "gemini" };
+}
+
+export type ToolCall = { name?: string; args?: Record<string, unknown> };
+
+/**
+ * Turns the model's text and function calls into a safe reply plus validated actions.
+ * Pure (no network), so the honesty rules are testable.
+ */
+export function postProcess(text: string, calls: ToolCall[], design: Design, task: Task, room: Room, catalog: Part[]): { reply: string; actions: ChatActionT[] } {
   const actions: ChatActionT[] = [];
   const rejects: string[] = [];
   const warnings: string[] = [];
   let working = design; // validate each action against the design after the earlier ones
-  for (const call of res.functionCalls ?? []) {
+  for (const call of calls) {
     const parsed = ChatAction.safeParse({ ...(call.args ?? {}), type: call.name });
     if (!parsed.success) continue;
     if (parsed.data.type === "regenerate") parsed.data.instruction = parsed.data.instruction.slice(0, 280);
@@ -137,8 +149,7 @@ export async function chat(messages: ChatMessage[], design: Design, task: Task, 
     working = applyAction(working, parsed.data);
   }
 
-  // Read text parts directly: res.text warns when the reply also has function calls.
-  let reply = (res.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
+  let reply = text;
   // The model wrote its text before the app checked its actions, so never let it claim a
   // rejected change, and never pass on a dollar amount that is not in the context.
   const said = actions.map(describeAction(catalog)).join(" ");
@@ -146,7 +157,7 @@ export async function chat(messages: ChatMessage[], design: Design, task: Task, 
   else if (!reply) reply = said || "I'm not sure how to help with that. Could you say it another way?";
   else if (unknownPrices(reply, design, actions, catalog)) reply = `${said} I'm not sure about exact prices, so check the buy list for the real numbers.`.trim();
   if (warnings.length) reply += ` ${warnings.join(" ")}`;
-  return { reply, actions, source: "gemini" };
+  return { reply, actions };
 }
 
 function applyAction(design: Design, a: ChatActionT): Design {
