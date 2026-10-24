@@ -1,7 +1,7 @@
 // Typed, validated access to the JSON data files. Safe on server and client.
 import catalogJson from "../../data/catalog.json";
 import roomJson from "../../data/room.json";
-import { Part, Room } from "./contracts";
+import { Check, Derived, Part, Room, SimResult, Task } from "./contracts";
 import { z } from "zod";
 
 // Room geometry conventions (sim and derive rely on these):
@@ -12,6 +12,10 @@ import { z } from "zod";
 
 export type Room = z.infer<typeof Room>;
 export type Target = Room["targets"][number];
+export type Task = z.infer<typeof Task>;
+export type Check = z.infer<typeof Check>;
+export type Derived = z.infer<typeof Derived>;
+export type SimResult = z.infer<typeof SimResult>;
 
 let catalogCache: Part[] | null = null;
 let roomCache: Room | null = null;
