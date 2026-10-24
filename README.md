@@ -1,5 +1,20 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## How a robot gets designed
+
+`POST /api/generate` runs a team of Gemini agents (see `docs/briefs/8-multi-agent-design.md`):
+
+1. Interpreter reads the task and picks room targets.
+2. Mobility, Arm & tool and Sensing agents pick parts in parallel, each from its own slice of the catalog.
+3. Power & brain and Routine agents follow, using the loads from step 2.
+4. Code (the budgeter) picks one option per agent under the budget. Over budget still returns the closest design, with the failed check shown.
+5. Master agent combines the parts. Fact-checker agent rewrites any claim the catalog data does not support.
+6. `derive.ts` checks the result; failures go back to the agent that owns them (max 2 repairs).
+
+The loading screen shows what each agent is doing. Set `AGENTS=single` to use the old single-call designer, `DEMO_MODE=1` for cached results.
+
+Build manuals get real product photos from photo agents (vendor page, Google Search, Gemini vision check). Photos are cached in `public/part-images/`.
+
 ## Getting Started
 
 First, run the development server:

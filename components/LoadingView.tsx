@@ -5,7 +5,8 @@ import { Owl } from "./Logo";
 
 const STEPS = ["Reading your task", "Picking parts from the catalog", "Checking pins, power and reach"];
 
-export function LoadingView({ prompt }: { prompt: string }) {
+/** `progress` is live text from the agents; with none (cached or offline demo) the generic steps play instead. */
+export function LoadingView({ prompt, progress = [] }: { prompt: string; progress?: string[] }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setI((n) => Math.min(n + 1, STEPS.length - 1)), 1400);
@@ -16,6 +17,15 @@ export function LoadingView({ prompt }: { prompt: string }) {
       <Owl size={140} blink />
       <h2>Designing your robot</h2>
       <p className="muted">{prompt}</p>
+      {progress.length > 0 ? (
+        <ul className="steps" aria-live="polite">
+          {progress.slice(-8).map((line, n, shown) => (
+            <li key={progress.length - shown.length + n} className={n === shown.length - 1 ? "now" : undefined}>
+              {n < shown.length - 1 ? <span className="done">✓</span> : <span className="dot" />}{line}
+            </li>
+          ))}
+        </ul>
+      ) : (
       <ul className="steps">
         {STEPS.map((s, n) => (
           <li key={s} className={n === i ? "now" : undefined}>
@@ -23,6 +33,7 @@ export function LoadingView({ prompt }: { prompt: string }) {
           </li>
         ))}
       </ul>
+      )}
     </div>
   );
 }
