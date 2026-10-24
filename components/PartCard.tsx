@@ -1,7 +1,7 @@
 import type { Part } from "@/lib/contracts";
 import { usd } from "@/lib/money";
 
-export function PartCard(p: { part: Part; reason?: string; inCart: boolean; onCart: () => void; onSwap: () => void; onReset: () => void; onDelete: () => void }) {
+export function PartCard(p: { part: Part; reason?: string; inCart: boolean; onCart: () => void; onSwap: () => void; onDelete: () => void }) {
   return (
     <div className="card" onPointerDown={(e) => e.stopPropagation()}>
       <div className="top">
@@ -16,7 +16,6 @@ export function PartCard(p: { part: Part; reason?: string; inCart: boolean; onCa
       </button>
       <div className="menu">
         <button className="item" onClick={p.onSwap}>⇄ Swap part</button>
-        <button className="item" onClick={p.onReset}>↺ Reset position</button>
         <button className="item danger" onClick={p.onDelete}>Delete part</button>
       </div>
       <p className="note">Removing a part re-runs the checks. You can undo for 10 seconds.</p>
