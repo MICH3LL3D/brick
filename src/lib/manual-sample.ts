@@ -13,7 +13,7 @@ const written: ManualPageT[] = [
   { book: "2", page: 2, kind: "steps", title: "Set up the Pi", blurb: "Flash the card, set your Wi-Fi, mount the board.", warning: undefined, parts: [{ qty: 1, label: "Raspberry Pi 5" }, { qty: 1, label: "microSD card" }, { qty: 4, label: "Standoff + screw" }, { qty: 1, label: "Your laptop" }], see: [], footer: "Power it with USB-C for now. A green light should blink.", photoCredit: PI_CREDIT,
     panels: [
       { title: "Flash the card", caption: "Install Raspberry Pi Imager from raspberrypi.com/software. Plug the card reader into your laptop." },
-      { title: "Edit settings", caption: "Hostname athena, username pi, your Wi-Fi, SSH on. Then WRITE and wait for 'done'." },
+      { title: "Edit settings", caption: "Hostname brick, username pi, your Wi-Fi, SSH on. Then WRITE and wait for 'done'." },
       { title: "Mount it", caption: "Card in the slot (contacts up). Screw the Pi onto 4 standoffs on the chassis deck. No metal below it." },
     ] },
   { book: "3", page: 2, kind: "wiring", title: "Wire the blocks", blurb: "Battery to both lever blocks, then blocks to the regulator input.", warning: "Battery stays unplugged until Book 8.", parts: [{ qty: 2, label: "Red wire" }, { qty: 2, label: "Black wire" }], see: [see("S", 1, "Strip a wire"), see("S", 2, "Lever block")],
