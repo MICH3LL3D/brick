@@ -46,10 +46,10 @@ test("toAttempt: missing reasons add a failing 'reasons' check", () => {
   for (const id of partIds) assert.ok(check.message.includes(id), id);
 });
 
-test("systemPrompt lists every catalog id and room target id", () => {
-  const s = systemPrompt(catalog, room);
+test("systemPrompt lists every catalog id and no room targets", () => {
+  const s = systemPrompt(catalog);
   for (const p of catalog) assert.ok(s.includes(p.id), p.id);
-  for (const t of room.targets) assert.ok(s.includes(t.id), t.id);
+  for (const t of room.targets) assert.ok(!s.includes(t.id), t.id);
 });
 
 /* ---------- demo cache ---------- */

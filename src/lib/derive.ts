@@ -3,6 +3,7 @@
 import type { Design, Part } from "./contracts";
 import type { Check, Derived, Room, Target, Task } from "./data";
 import { partMap } from "./data";
+import { requirementChecks } from "./requirements";
 
 /* ---------- Shared constants (sim.ts should use the same numbers) ---------- */
 
@@ -110,7 +111,9 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
   const add = (id: string, ok: boolean, message: string) => checks.push({ id, ok, message });
 
   /* Totals and footprint */
-  const targets = actedTargets(design, task, room);
+  // Room-free designs (task.requirements) are checked against the task's needs, not room targets.
+  const req = task.requirements;
+  const targets = req ? [] : actedTargets(design, task, room);
   const waterTargets = targets.filter((t) => t.action === "water");
   const pickupTargets = targets.filter((t) => t.action === "pickup");
   const waterMl = waterTargets.length * WATER_PER_PLANT_ML;
@@ -119,7 +122,7 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
   const totalUsd = round2(parts.reduce((s, p) => s + p.priceUsd, 0));
   const partsMassG = parts.reduce((s, p) => s + p.massG, 0);
   // Full tank at the start of a watering mission (1 ml of water = 1 g).
-  const waterMassG = waterTargets.length ? tankMl : 0;
+  const waterMassG = req ? (req.liquidMl > 0 ? tankMl : 0) + req.carryMassG : waterTargets.length ? tankMl : 0;
   const totalMassG = Math.round(partsMassG + waterMassG);
 
   const onDeck = parts.filter((p) => p.category !== "chassis");
@@ -277,93 +280,97 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
       ? "No chassis to carry the parts."
       : carriedG <= chassisCap
         ? `Carries ${carriedG} g of a ${chassisCap} g limit.`
-        : `Parts${waterMassG ? " and water" : ""} weigh ${carriedG} g but the ${chassis.name} carries at most ${chassisCap} g. Use a bigger chassis or lighter parts.`,
+        : `Parts${waterMassG ? (req ? " and the load" : " and water") : ""} weigh ${carriedG} g but the ${chassis.name} carries at most ${chassisCap} g. Use a bigger chassis or lighter parts.`,
   );
-  if (pickupTargets.length) {
-    const gripper = parts.find(isGripper);
-    const liftG = OBJECT_MASS_G + (gripper?.massG ?? 0);
-    const armCap = arm?.caps.armPayloadG ?? 0;
+  if (req) {
+    checks.push(...requirementChecks(r, req, { footprintW: footprint.w, runtimeMin }));
+  } else {
+    if (pickupTargets.length) {
+      const gripper = parts.find(isGripper);
+      const liftG = OBJECT_MASS_G + (gripper?.massG ?? 0);
+      const armCap = arm?.caps.armPayloadG ?? 0;
+      add(
+        "arm-payload",
+        !!arm && armCap >= liftG,
+        !arm
+          ? "Picking things up needs an arm."
+          : armCap >= liftG
+            ? `The arm lifts ${armCap} g; the object and gripper weigh about ${liftG} g.`
+            : `The ${arm.name} lifts only ${armCap} g but the object plus gripper weigh about ${liftG} g. Use a stronger arm.`,
+      );
+    }
+
+    /* 9. Tools for each action */
+    const toolProblems: string[] = [];
+    if (waterTargets.length && !parts.some(isPump)) toolProblems.push("watering needs a pump");
+    if (waterTargets.length && !parts.some(isTank)) toolProblems.push("watering needs a water tank");
+    if (pickupTargets.length && !parts.some(isGripper)) toolProblems.push("picking up needs a gripper");
+    if (targets.some((t) => t.action === "photograph") && !parts.some(isCamera)) toolProblems.push("taking photos needs a camera");
+    if (targets.some((t) => t.action === "touch") && !arm) toolProblems.push("touching things needs an arm");
     add(
-      "arm-payload",
-      !!arm && armCap >= liftG,
-      !arm
-        ? "Picking things up needs an arm."
-        : armCap >= liftG
-          ? `The arm lifts ${armCap} g; the object and gripper weigh about ${liftG} g.`
-          : `The ${arm.name} lifts only ${armCap} g but the object plus gripper weigh about ${liftG} g. Use a stronger arm.`,
+      "tools",
+      toolProblems.length === 0,
+      toolProblems.length === 0 ? "Has the tools every action needs." : `Missing tools: ${toolProblems.join("; ")}.`,
+    );
+
+    /* 10. Reach: height and horizontal distance for every contact target */
+    const top = toolTopMm(r);
+    const reachH = horizontalReachMm(r);
+    const reachFails: string[] = [];
+    for (const t of targets) {
+      if (!CONTACT_ACTIONS.has(t.action)) continue;
+      if (t.heightMm > top) reachFails.push(`${t.label} is ${t.heightMm} mm high but the tool tops out at ${top} mm`);
+      const dist = approachDistanceMm(t, room);
+      if (dist > reachH) reachFails.push(`${t.label} is ${Math.round(dist)} mm in from the edge but the arm reaches only ${reachH - TOOL_ALLOWANCE_MM} mm (plus ${TOOL_ALLOWANCE_MM} mm tool)`);
+    }
+    add(
+      "reach",
+      reachFails.length === 0,
+      reachFails.length === 0
+        ? `The tool reaches up to ${top} mm and ${reachH} mm out, enough for every target.`
+        : `${reachFails.join("; ")}. A taller or extendable arm would fix this.`,
+    );
+
+    /* 11. Tank */
+    if (waterTargets.length) {
+      add(
+        "tank",
+        tankMl >= waterMl,
+        tankMl >= waterMl
+          ? `Tank holds ${tankMl} ml; ${waterTargets.length} plants need ${waterMl} ml.`
+          : tankMl === 0
+            ? `${waterTargets.length} plants need ${waterMl} ml of water but there is no tank. Add a water tank.`
+            : `${waterTargets.length} plants need ${waterMl} ml but the tank holds ${tankMl} ml. Use a bigger tank.`,
+      );
+    }
+
+    /* 12. Doorway */
+    if (room.doorways.length) {
+      const need = footprint.w + 2 * DOOR_CLEARANCE_MM;
+      const widest = Math.max(...room.doorways.map((d) => d.widthMm));
+      const narrowest = Math.min(...room.doorways.map((d) => d.widthMm));
+      add(
+        "doorway",
+        need <= widest,
+        need > widest
+          ? `The robot is ${footprint.w} mm wide and needs ${need} mm to pass, but the widest doorway is ${widest} mm. Use a narrower chassis.`
+          : need > narrowest
+            ? `The robot is ${footprint.w} mm wide: it fits the ${widest} mm doorway but not the ${narrowest} mm one, so it must take the long way (the simulation checks the actual path).`
+            : `The robot is ${footprint.w} mm wide and fits every doorway.`,
+      );
+    }
+
+    /* 13. Routine */
+    const known = new Set(room.targets.map((t) => t.id));
+    const badSteps = design.routine.filter((s) => s.target && !known.has(s.target));
+    add(
+      "routine",
+      badSteps.length === 0,
+      badSteps.length === 0
+        ? `Routine has ${design.routine.length} steps.`
+        : `Routine names unknown targets: ${badSteps.map((s) => s.target).join(", ")}. Use only room target ids.`,
     );
   }
-
-  /* 9. Tools for each action */
-  const toolProblems: string[] = [];
-  if (waterTargets.length && !parts.some(isPump)) toolProblems.push("watering needs a pump");
-  if (waterTargets.length && !parts.some(isTank)) toolProblems.push("watering needs a water tank");
-  if (pickupTargets.length && !parts.some(isGripper)) toolProblems.push("picking up needs a gripper");
-  if (targets.some((t) => t.action === "photograph") && !parts.some(isCamera)) toolProblems.push("taking photos needs a camera");
-  if (targets.some((t) => t.action === "touch") && !arm) toolProblems.push("touching things needs an arm");
-  add(
-    "tools",
-    toolProblems.length === 0,
-    toolProblems.length === 0 ? "Has the tools every action needs." : `Missing tools: ${toolProblems.join("; ")}.`,
-  );
-
-  /* 10. Reach: height and horizontal distance for every contact target */
-  const top = toolTopMm(r);
-  const reachH = horizontalReachMm(r);
-  const reachFails: string[] = [];
-  for (const t of targets) {
-    if (!CONTACT_ACTIONS.has(t.action)) continue;
-    if (t.heightMm > top) reachFails.push(`${t.label} is ${t.heightMm} mm high but the tool tops out at ${top} mm`);
-    const dist = approachDistanceMm(t, room);
-    if (dist > reachH) reachFails.push(`${t.label} is ${Math.round(dist)} mm in from the edge but the arm reaches only ${reachH - TOOL_ALLOWANCE_MM} mm (plus ${TOOL_ALLOWANCE_MM} mm tool)`);
-  }
-  add(
-    "reach",
-    reachFails.length === 0,
-    reachFails.length === 0
-      ? `The tool reaches up to ${top} mm and ${reachH} mm out, enough for every target.`
-      : `${reachFails.join("; ")}. A taller or extendable arm would fix this.`,
-  );
-
-  /* 11. Tank */
-  if (waterTargets.length) {
-    add(
-      "tank",
-      tankMl >= waterMl,
-      tankMl >= waterMl
-        ? `Tank holds ${tankMl} ml; ${waterTargets.length} plants need ${waterMl} ml.`
-        : tankMl === 0
-          ? `${waterTargets.length} plants need ${waterMl} ml of water but there is no tank. Add a water tank.`
-          : `${waterTargets.length} plants need ${waterMl} ml but the tank holds ${tankMl} ml. Use a bigger tank.`,
-    );
-  }
-
-  /* 12. Doorway */
-  if (room.doorways.length) {
-    const need = footprint.w + 2 * DOOR_CLEARANCE_MM;
-    const widest = Math.max(...room.doorways.map((d) => d.widthMm));
-    const narrowest = Math.min(...room.doorways.map((d) => d.widthMm));
-    add(
-      "doorway",
-      need <= widest,
-      need > widest
-        ? `The robot is ${footprint.w} mm wide and needs ${need} mm to pass, but the widest doorway is ${widest} mm. Use a narrower chassis.`
-        : need > narrowest
-          ? `The robot is ${footprint.w} mm wide: it fits the ${widest} mm doorway but not the ${narrowest} mm one, so it must take the long way (the simulation checks the actual path).`
-          : `The robot is ${footprint.w} mm wide and fits every doorway.`,
-    );
-  }
-
-  /* 13. Routine */
-  const known = new Set(room.targets.map((t) => t.id));
-  const badSteps = design.routine.filter((s) => s.target && !known.has(s.target));
-  add(
-    "routine",
-    badSteps.length === 0,
-    badSteps.length === 0
-      ? `Routine has ${design.routine.length} steps.`
-      : `Routine names unknown targets: ${badSteps.map((s) => s.target).join(", ")}. Use only room target ids.`,
-  );
 
   /* 14. Budget */
   add(
