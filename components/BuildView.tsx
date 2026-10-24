@@ -4,15 +4,15 @@ import { useMemo, useState } from "react";
 import type { Design } from "@/lib/contracts";
 import { bookMeta, type BookIdT, type ManualSetT } from "@/lib/manual-format";
 import { BRAND } from "@/lib/brand";
-import { Wordmark } from "./Logo";
 import { ManualPage } from "./ManualPage";
-import { ModeSwitch, type Mode } from "./ModeSwitch";
+import type { Mode } from "./ModeSwitch";
 import { SprocketChat } from "./SprocketChat";
+import { BrandSide } from "./TopBar";
 
 type Pos = { book: BookIdT; page: number };
 const KEY = `${BRAND}-manual-done`;
 
-export function BuildView({ manuals, status = "", design, prompt, onMode }: { manuals: ManualSetT; status?: string; design: Design | null; prompt: string; onMode: (m: Mode) => void }) {
+export function BuildView({ manuals, status = "", design, prompt, onMode, onHistory }: { manuals: ManualSetT; status?: string; design: Design | null; prompt: string; onMode: (m: Mode) => void; onHistory: () => void }) {
   const [pos, setPos] = useState<Pos>({ book: "0", page: 1 });
   const [from, setFrom] = useState<Pos | null>(null); // where a SEE tag was opened from
   // BuildView only mounts client-side (after the mode switch), so localStorage is safe in the initialiser.
@@ -53,8 +53,8 @@ export function BuildView({ manuals, status = "", design, prompt, onMode }: { ma
 
   return (
     <div className="build">
-      <header className="b-top">
-        <div className="l"><Wordmark /><ModeSwitch mode="build" onMode={onMode} /></div>
+      <header className="topbar b-top">
+        <BrandSide historyOpen={false} onHistory={onHistory} mode="build" onMode={onMode} canBuild />
         <div className="r">
           <span>{doneCount} of {all.length} pages done</span>
           <i className="bar"><i style={{ width: `${(doneCount / all.length) * 100}%` }} /></i>
