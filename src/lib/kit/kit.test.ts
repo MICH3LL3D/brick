@@ -67,7 +67,7 @@ test("buyListCsv: duplicate ids become quantity, names are quoted, total row sum
 test("wiringMd labels driver and sensor pins with their roles", () => {
   const design: Design = {
     summary: "t",
-    partIds: ["pi4b-4gb", "chassis-2wd-s", "md-tb6612", "us-hcsr04", "bat-nimh-900", "reg-5v-3a"],
+    partIds: ["pi4b-4gb", "chassis-4wd-m", "md-tb6612", "us-hcsr04", "bat-nimh-900", "reg-5v-3a"],
     reasons: {}, routine: [], budgetUsd: 500,
   };
   const task: Task = { prompt: "t", targetIds: [] };
@@ -117,7 +117,7 @@ test("duplicate motor drivers get distinct GPIO pins", () => {
 
 const PATROL_PANTILT: Design = {
   summary: "patrol with a pan/tilt camera",
-  partIds: ["pi4b-4gb", "chassis-2wd-s", "md-tb6612", "bat-nimh-900", "reg-5v-3a", "cam-pi3", "tool-cam-pantilt", "servo-pca9685"],
+  partIds: ["pi4b-4gb", "chassis-4wd-m", "md-tb6612", "bat-nimh-900", "reg-5v-3a", "cam-pi3", "tool-cam-pantilt", "servo-pca9685"],
   reasons: {},
   routine: [
     { op: "goto", target: "window-living" }, { op: "photograph", target: "window-living" },

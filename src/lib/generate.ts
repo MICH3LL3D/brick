@@ -102,7 +102,7 @@ Rules:
 - Add only parts the task needs. Skip optional extras (extra sensors, cameras for non-photo tasks) when they would push the total near the budget.
 
 Code will check the design. Design to pass these checks:
-- Exactly one controller (Raspberry Pi), one chassis, at most one arm, 1-2 batteries, at least one motor driver.
+- Exactly one controller (Raspberry Pi), one chassis with at least 4 wheels (caps.wheels >= 4; 2-wheel chassis always fail), at most one arm, 1-2 batteries, at least one motor driver.
 - Motor channels: wheels need 2; each linear actuator arm and each DC pump (interface=gpio) needs 1 more. I2C motor HATs give 4 channels, other drivers 2. So a design with a linear actuator arm or a gpio pump needs the 4-channel I2C motor HAT (or two 2-channel drivers).
 - Any chosen part with interface=pwm (servos, servo grippers, pan-tilt mounts) needs the PCA9685 servo board in the design too.
 - The Pi needs 5V at 3A: a 5V step-down regulator (maxCurrentA>=3) fed by a battery above 5.5V. USB power banks give only 2A, which fails.

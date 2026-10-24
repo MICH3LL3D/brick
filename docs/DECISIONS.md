@@ -7,7 +7,7 @@ A web playground. User types any task. Gemini designs ONE wheeled robot for it, 
 
 ## Scope rules
 - Any task prompt is accepted. The simulator only understands "visit targets and act" (water, pickup, drop, photograph, touch). If a task does not fit, say so honestly and still return the design and buy list.
-- Wheeled bases only (2 or 4 wheels, several sizes). Arms may be fixed servo arms OR extendable arms (telescoping / linear actuator). No legs, no flying.
+- Wheeled bases only, always at least 4 wheels so the robot balances (forced by the `structure` check; 2-wheel chassis fail it). Arms may be fixed servo arms OR extendable arms (telescoping / linear actuator). No legs, no flying.
 - Gemini picks parts and reasons. Code does all math: dimensions, totals, pin map, power, reach, simulation.
 - Gemini only returns part ids that exist in the catalog (response schema enum). Invented ids are rejected and retried, max 2 retries with check failures fed back.
 - Room scanning is NOT built. Sample apartment is hand-written JSON. Say "LiDAR iPhone scan import is future work".

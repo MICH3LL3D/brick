@@ -103,6 +103,9 @@ export function actedTargets(design: Design, task: Task, room: Room): Target[] {
 
 /* ---------- Main entry ---------- */
 
+/** Forced rule: fewer wheels cannot balance a robot that carries an arm, a tank and a battery. */
+export const MIN_WHEELS = 4;
+
 export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: Part[]): Derived {
   const r = resolveParts(design, catalog);
   const { parts, chassis, controller, arm } = r;
@@ -144,6 +147,7 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
   const structureProblems: string[] = [];
   if (count("controller") !== 1) structureProblems.push(`needs exactly one Raspberry Pi (has ${count("controller")})`);
   if (count("chassis") !== 1) structureProblems.push(`needs exactly one chassis (has ${count("chassis")})`);
+  if (chassis && (chassis.caps.wheels ?? 0) < MIN_WHEELS) structureProblems.push(`needs a chassis with at least ${MIN_WHEELS} wheels so it can balance (${chassis.name} has ${chassis.caps.wheels ?? 0})`);
   if (count("arm") > 1) structureProblems.push(`can carry only one arm (has ${count("arm")})`);
   if (batteries.length < 1) structureProblems.push("needs a battery");
   if (batteries.length > 2) structureProblems.push(`has ${batteries.length} batteries; use one for logic and at most one for motors`);
@@ -152,7 +156,7 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
     "structure",
     structureProblems.length === 0,
     structureProblems.length === 0
-      ? "Has one Raspberry Pi, one chassis, a battery and a motor driver."
+      ? "Has one Raspberry Pi, one chassis with 4 or more wheels, a battery and a motor driver."
       : `The robot ${structureProblems.join("; ")}.`,
   );
 

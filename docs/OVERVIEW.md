@@ -8,7 +8,7 @@ Non-technical people who want a robot for a job, and robotics hobbyists who want
 
 ## Features (all in scope)
 1. Prompt to robot: Gemini generates ONE robot per prompt, composed only from catalog part ids (chassis, Raspberry Pi, motor driver, arm, tool, sensors, power). Any task is accepted.
-2. Wheeled bases, 2 or 4 wheels, several sizes. Arms can be fixed servo arms or extendable (telescoping / linear actuator) arms.
+2. Wheeled bases, at least 4 wheels (forced rule), several sizes. Arms can be fixed servo arms or extendable (telescoping / linear actuator) arms.
 3. Checks done by code, not Gemini: pin budget, power and battery, payload, arm reach vs target height, tank size, doorway fit. Failures go back to Gemini for up to 2 repair attempts, and are always shown to the user.
 4. 3D preview: procedural robot from catalog dimensions, orbit controls, arm extends and retracts.
 5. Simulation: hand-authored sample apartment, top-down view, robot drives along an A* path, visits targets (water, pickup, drop, photograph, touch), shows green/red events with reasons, battery use, duration.
