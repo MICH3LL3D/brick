@@ -142,7 +142,7 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
       <div className="pop-anchor">
         <TopBar
           tab={tab} onTab={setTab} checksOpen={checksOpen} onChecks={() => setChecksOpen(!checksOpen)} failed={failed}
-          cartCount={cartParts.length} onCart={() => setCartOpen(true)}
+          cartCount={cartParts.length} onCart={() => setCartOpen(!cartOpen)}
           historyOpen={historyOpen} onHistory={() => setHistoryOpen(!historyOpen)}
         />
         {limitsOpen && (
@@ -158,15 +158,14 @@ export function Playground({ initialPrompt, initialBudget }: { initialPrompt: st
       </div>
 
       <div className="body">
-        {historyOpen && (
-          <HistorySidebar
+        <HistorySidebar
+          open={historyOpen}
             items={robots.map((r) => ({ id: r.id, name: r.name, totalUsd: r.derived.totalUsd, parts: r.design.partIds.length }))}
             currentId={currentId}
             onPick={(id) => { setCurrentId(id); setSelectedId(null); }}
             onNew={() => { setCurrentId(null); setPrompt(""); setChecksOpen(false); }}
             onRename={(id, name) => patch(id, (r) => ({ ...r, name }))}
           />
-        )}
         <main className="stage">
           {busy && <LoadingView prompt={prompt} />}
           {!busy && !current && genError && <ErrorView message={genError.message} onRetry={() => run(genError.prompt, genError.budget)} />}
