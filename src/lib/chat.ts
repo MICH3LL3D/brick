@@ -90,6 +90,8 @@ Honesty rules:
 - The build kit is untested on hardware. LiDAR room scanning and shopping agents are future work.
 Editing: use the tools to change the design when the user asks. Prefer set_budget for cheaper/pricier requests,
 swap_part for a specific part change (same category only), and regenerate only for big changes.
+Users are often confused by the design or want a small tweak: briefly explain the "why" (from the reasons and checks),
+and prefer small edits (swap_part, set_budget) over regenerate.
 After calling a tool, also say in one short sentence what you changed.
 
 Current design:
