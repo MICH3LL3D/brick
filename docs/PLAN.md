@@ -1,4 +1,4 @@
-# athena1: Team Plan (hackathon, Sat 2026-10-24)
+# brick: Team Plan (hackathon, Sat 2026-10-24)
 
 Source of truth for scope, ownership and timeline. Deadline **4:00 pm PT**. Track: **Best Use of Google Gemini**.
 Product detail lives in `docs/DECISIONS.md` and `docs/briefs/`. Shared types live in `src/lib/contracts.ts`.
@@ -33,7 +33,7 @@ Demo prompts: "Water my plants", "Bring my water bottle from the desk to the cou
 | Robot type | Wheeled only (2 or 4 wheels). Fixed or extendable arms. No legs, no flying. |
 | Who does what | Gemini picks parts and writes reasons. Code does all math, checks and simulation. |
 | Parts | Gemini may only return catalog part ids. Invalid ids are rejected and retried (max 2 repairs, failures shown to the user). |
-| Naming | Product name is athena1. One constant string in one place (`src/lib/brand.ts`, last character renders gold). Chatbot: Sprocket. |
+| Naming | Product name is brick. One constant string in one place (`src/lib/brand.ts`). Chatbot: Sprocket. |
 | Frontend design | Designed in **Paper** first, then built. See section 7. |
 | UI colors | Green (sage) buttons and fills always carry white/beige-white text and icons (`#FBF8F3`), never dark text. |
 | Data | JSON files. No database. |

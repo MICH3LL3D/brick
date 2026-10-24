@@ -1,2 +1,2 @@
-// The one place the product name lives. The last character renders gold in the wordmark.
+// The one place the product name lives.
 export const BRAND = "brick";

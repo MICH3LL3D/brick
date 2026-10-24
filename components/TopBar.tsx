@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Owl, Wordmark } from "./Logo";
+import { Brick, Wordmark } from "./Logo";
 import { ModeSwitch, type Mode } from "./ModeSwitch";
 
 export type Tab = "robot" | "sim";
@@ -19,7 +19,7 @@ export function TopBar(p: {
             <rect x="1.75" y="2.75" width="14.5" height="12.5" rx="3" /><path d="M6.75 3v12" />
           </svg>
         </button>
-        <Link className="logo" href="/"><Owl size={28} /><Wordmark /></Link>
+        <Link className="logo" href="/"><Brick size={28} /><Wordmark /></Link>
         <ModeSwitch mode={p.mode} onMode={p.onMode} />
       </div>
       <div className="tabs" role="tablist">
