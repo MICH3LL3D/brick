@@ -26,10 +26,10 @@ export function ChassisMesh({ placed, shell, frame, selected = false }: { placed
   return (
     <Selected.Provider value={selected}>
       <group position={placed.pos}>
-        <Box s={[l, t, w]} p={[0, h / 2 - t / 2, 0]} c="#3A3632" look={{ metal: 0.6, rough: 0.45 }} />
+        <Box s={[l, t, w]} p={[0, h / 2 - t / 2, 0]} c="#C9C5BE" look={{ metal: 0.5, rough: 0.45 }} />
         <mesh geometry={BOX} material={bodyMat} scale={[l * 0.94, bodyH, w * 0.86]} position={[0, bodyY, 0]} castShadow={shell} receiveShadow dispose={null} raycast={shell ? undefined : noRaycast} />
         {frame && (
-          <Edges geometry={BOX} scale={[l * 0.94, bodyH, w * 0.86]} position={[0, bodyY, 0]} color={shell ? C.ink : C.muted} lineWidth={1.25} dashed={!shell} dashSize={0.006} gapSize={0.006} transparent opacity={shell ? 0.5 : 0.7} />
+          <Edges geometry={BOX} scale={[l * 0.94, bodyH, w * 0.86]} position={[0, bodyY, 0]} color={shell ? "#5A554D" : C.muted} lineWidth={1.25} dashed={!shell} dashSize={0.006} gapSize={0.006} transparent opacity={shell ? 0.5 : 0.7} />
         )}
         {!shell && motorXs.map((x) => [-1, 1].map((k) => (
           <group key={`${x}${k}`}>

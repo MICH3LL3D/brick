@@ -11,10 +11,10 @@ export const C = {
 
 /** Base colour per catalog category. */
 export const CATEGORY_COLOR: Record<string, string> = {
-  chassis: "#2A2724",
+  chassis: "#E8E3D9",
   controller: "#2F6B4F",
   motor_driver: "#5B3A8C",
-  arm: "#8A8378",
+  arm: "#D6D0C4",
   tool: "#3187A0",
   sensor: "#B5523B",
   power: "#C8A56A",

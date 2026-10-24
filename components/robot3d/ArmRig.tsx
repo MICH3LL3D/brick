@@ -8,7 +8,7 @@ import type { ArmRig as Rig } from "@/lib/robot3d/layout";
 import { armReadout, mastPose, servoPose } from "./arm/kinematics";
 import { C, CATEGORY_COLOR } from "./theme";
 
-const JOINT = "#2A2724";
+const JOINT = "#5A554D";
 const ROD = "#C9C4BA";
 const SPRING_W = 9; // rad/s natural frequency of the critically damped spring (~0.5 s settle)
 

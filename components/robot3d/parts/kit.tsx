@@ -69,12 +69,12 @@ export function SelectBox({ size }: { size: V3 }) {
 
 /** Common colours for parts that are not the category tint. */
 export const K = {
-  black: "#141312",
-  rubber: "#1A1816",
+  black: "#2E2B28",
+  rubber: "#3A3632",
   metal: "#9C978F",
   silver: "#C9C5BE",
   gold: "#D4AF37",
-  dark: "#2A2724",
+  dark: "#5A554D",
   glass: "#0E2A3A",
   tube: "#D9D4CB",
   water: "#3187A0",
