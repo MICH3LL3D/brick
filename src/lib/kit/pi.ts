@@ -538,6 +538,7 @@ def sensors():
         return hasPanTilt ? `    pan_tilt.center()\n    ${shot}` : shot;
       }
       case "return_home": return "    drive.follow(config.HOME_PATH or [config.HOME])";
+      default: return `    print(${py(`TODO: custom step ${s.op}${s.target ? ` (target ${s.target})` : ""}`)})  # no generated code for this step; fill it in`;
     }
   });
 

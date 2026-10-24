@@ -14,8 +14,8 @@ export const MIN_RUNTIME_MIN = 15;       // a mission must fit in this much batt
 export const BATTERY_USABLE = 0.8;       // do not plan on the last 20% of a battery
 export const PI_GPIO_PINS = 26;          // BCM 2-27 on the 40-pin header
 
-/** Actions that need the tool to physically reach the target. */
-const CONTACT_ACTIONS = new Set(["water", "pickup", "drop", "touch"]);
+/** Actions done from a distance. Any other action (including ones we have never heard of) needs the tool to reach the target. */
+const REMOTE_ACTIONS = new Set(["photograph"]);
 
 /** Pi 5V current each controller needs, in amps (Raspberry Pi recommended supply). */
 const PI_SUPPLY_A: Record<string, number> = { "pi4b-4gb": 3, "pi5-4gb": 3 };
@@ -312,7 +312,7 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
   const reachH = horizontalReachMm(r);
   const reachFails: string[] = [];
   for (const t of targets) {
-    if (!CONTACT_ACTIONS.has(t.action)) continue;
+    if (REMOTE_ACTIONS.has(t.action)) continue;
     if (t.heightMm > top) reachFails.push(`${t.label} is ${t.heightMm} mm high but the tool tops out at ${top} mm`);
     const dist = approachDistanceMm(t, room);
     if (dist > reachH) reachFails.push(`${t.label} is ${Math.round(dist)} mm in from the edge but the arm reaches only ${reachH - TOOL_ALLOWANCE_MM} mm (plus ${TOOL_ALLOWANCE_MM} mm tool)`);

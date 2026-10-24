@@ -51,8 +51,11 @@ export type Part = z.infer<typeof Part>;
 
 /* ---------- Design (what Gemini returns, constrained to catalog ids) ---------- */
 
+/** Steps the kit generator turns into real code. Gemini may use others. */
+export const KNOWN_OPS = ["goto", "extend_arm", "retract_arm", "grip", "release", "pump_on", "pump_off", "wait", "photograph", "return_home"] as const;
+
 export const RoutineStep = z.object({
-  op: z.enum(["goto", "extend_arm", "retract_arm", "grip", "release", "pump_on", "pump_off", "wait", "photograph", "return_home"]),
+  op: z.string().max(40).regex(/^[a-z0-9_]+$/i),                                       // any step name; KNOWN_OPS have generated code, others become TODO stubs
   target: z.string().optional(),     // target id from the task
   value: z.number().optional(),      // mm for extend, seconds for wait/pump
 });
@@ -73,7 +76,7 @@ export const Target = z.object({
   label: z.string(),                                    // "fern on the shelf"
   x: z.number(), y: z.number(),                         // floor position in mm, room frame
   heightMm: z.number(),                                 // height of the thing to act on
-  action: z.enum(["water", "pickup", "drop", "photograph", "touch"]),
+  action: z.string().max(40).regex(/^[a-z0-9_]+$/i),                                   // "water", "pickup", "drop", "photograph", "touch", or anything else the room defines
 });
 
 export const Room = z.object({
