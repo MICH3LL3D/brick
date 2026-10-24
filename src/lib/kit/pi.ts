@@ -14,13 +14,18 @@ type MotorChannel =
   | { kind: "hat"; number: number; address: number };
 
 /** Pin order each driver's GPIO list uses (matches derive.ts handing out pins in this order). */
-const DRIVER_PIN_ROLES: Record<string, string[]> = {
+export const DRIVER_PIN_ROLES: Record<string, string[]> = {
   "md-tb6612": ["AIN1", "AIN2", "PWMA", "BIN1", "BIN2", "PWMB", "STBY"],
   "md-drv8833": ["AIN1", "AIN2", "BIN1", "BIN2"],
   "md-g2-24v14": ["M1PWM", "M1DIR", "M2PWM", "M2DIR", "SLP", "FLT"],
 };
 
 const gpioNums = (pins: string[]) => pins.map((p) => /^GPIO(\d+)/.exec(p)?.[1]).filter(Boolean).map(Number);
+
+/** Pin role names for GPIO sensors, in the order derive.ts hands out their pins. */
+export function sensorPinRoles(part: Part): string[] {
+  return (part.caps.pins ?? 0) >= 2 ? ["TRIG", "ECHO"] : ["OUT"];
+}
 
 type Hardware = {
   channels: MotorChannel[];           // physical motor channels, in letter order A, B, C...
@@ -75,7 +80,13 @@ function hardware(design: Design, derived: Derived, catalog: Part[]): Hardware {
       else if (isPump(part)) servo.pump = pca;
       else servo.pan_tilt = pca;
     }
-    if (part.category === "sensor" && part.caps.interface === "gpio") gpio[part.id.replace(/-/g, "_")] = gpioNums(m.pins);
+    if (part.category === "sensor" && part.caps.interface === "gpio") {
+      // Key by id plus a counter so two identical sensors both keep their pins.
+      const base = part.id.replace(/-/g, "_");
+      let key = base;
+      for (let n = 2; gpio[key]; n++) key = `${base}_${n}`;
+      gpio[key] = gpioNums(m.pins);
+    }
   }
   return { channels, alwaysOn, uses, servo, gpio, hasAdc: r.parts.some((p) => /ads1115/.test(p.id)) };
 }
@@ -104,15 +115,20 @@ export function piFiles(design: Design, task: Task, derived: Derived, sim: SimRe
   const hasPump = !!hw.uses.pump || !!hw.servo.pump;
   const sensors = Object.keys(hw.gpio);
 
-  // Waypoints for each goto: the sim path between the previous event and this one.
-  const waypoints: Record<string, [number, number][]> = {};
+  // One leg per sim event: the sim path between the previous event and this one.
+  // Each goto in the routine uses the next unused leg for its target, so repeat visits work.
+  const legs: { target: string; points: [number, number][] }[] = [];
   let prevT = 0;
   for (const e of sim.events) {
-    if (!waypoints[e.targetId]) {
-      waypoints[e.targetId] = sim.path.filter((p) => p.t > prevT && p.t <= e.t).map((p) => [Math.round(p.x), Math.round(p.y)]);
-    }
+    legs.push({ target: e.targetId, points: sim.path.filter((p) => p.t > prevT && p.t <= e.t).map((p) => [Math.round(p.x), Math.round(p.y)]) });
     prevT = e.t;
   }
+  const usedLegs = new Set<number>();
+  const legFor = (target: string): number => {
+    const i = legs.findIndex((l, k) => l.target === target && !usedLegs.has(k));
+    if (i >= 0) usedLegs.add(i);
+    return i;
+  };
   const homePath = sim.path.filter((p) => p.t > prevT).map((p) => [Math.round(p.x), Math.round(p.y)]);
 
   const strokeMm = linear ? Math.max(0, (arm.caps.liftMaxMm ?? 0) - arm.dims.h) : 0;
@@ -143,6 +159,8 @@ HAS_CAMERA = ${py(hasCamera)}
 
 # Motion, from catalog values. Speeds are fractions of full power.
 DRIVE_SPEED = 0.5
+INVERT_LEFT = False                   # set True if selftest shows the left side runs backwards
+INVERT_RIGHT = False
 SAFE_SPEED = 0.25                     # selftest speed
 MAX_SPEED_MPS = ${py(chassis?.caps.speedMps ?? 0.3)}  # no-load speed at full power
 WHEEL_BASE_MM = ${py(chassis?.dims.w ?? 150)}
@@ -155,7 +173,7 @@ ARM_LIFT_MAX_MM = ${py(arm?.caps.liftMaxMm ?? 0)}
 PUMP_ML_PER_S = ${py(r.parts.find(isPump)?.caps.pumpMlPerS ?? 0)}
 
 HOME = ${py([room.home.x, room.home.y])}
-WAYPOINTS = ${py(waypoints)}
+LEGS = ${py(legs.map((l) => l.points))}  # one list of [x, y] waypoints per goto, in order
 HOME_PATH = ${py(homePath)}
 `;
 
@@ -171,9 +189,10 @@ _always_on = [DigitalOutputDevice(pin, initial_value=True) for pin in config.ALW
 class Channel:
     """One motor output. value is -1.0 (full reverse) to 1.0 (full forward)."""
 
-    def __init__(self, letter):
+    def __init__(self, letter, invert=False):
         spec = config.MOTOR_CHANNELS[letter]
         self.kind = spec["kind"]
+        self.sign = -1.0 if invert else 1.0
         if self.kind == "gpio":
             # TB6612: PWM on IN pins with the PWM pin held high works as speed control.
             self.motor = Motor(spec["forward"], spec["backward"], enable=spec.get("enable"), pwm=True)
@@ -187,7 +206,7 @@ class Channel:
             self.motor = getattr(_hats[address], "motor%d" % spec["number"])
 
     def run(self, value):
-        value = max(-1.0, min(1.0, value))
+        value = max(-1.0, min(1.0, value)) * self.sign
         if self.kind == "hat":
             self.motor.throttle = value
         else:
@@ -207,8 +226,8 @@ from drivers.motors import Channel
 
 class Drive:
     def __init__(self):
-        self.left = Channel(config.DRIVE_LEFT)
-        self.right = Channel(config.DRIVE_RIGHT)
+        self.left = Channel(config.DRIVE_LEFT, invert=config.INVERT_LEFT)
+        self.right = Channel(config.DRIVE_RIGHT, invert=config.INVERT_RIGHT)
         self.x, self.y = config.HOME
         self.heading = 0.0  # radians, 0 = +x
 
@@ -272,24 +291,29 @@ import time
 import config
 from drivers.servo_board import kit
 
-REST = 90
-REACH = 40
+# Angles per joint, in servo channel order (base, shoulder, elbow, wrist/claw).
+# These are starting guesses. Calibrate each joint alone before running main.py.
+REST = [90, 150, 30, 90]
+REACH = [90, 90, 90, 90]
 
 
 class ServoArm:
     def __init__(self):
         self.channels = config.SERVO_CHANNELS.get("arm", [])
 
-    def _set(self, angle):
-        for ch in self.channels[1:3]:  # shoulder and elbow
+    def _set(self, angles):
+        for ch, angle in zip(self.channels, angles):
             kit().servo[ch].angle = angle
-        time.sleep(0.5)
+            time.sleep(0.3)  # one joint at a time so the arm does not fold into itself
 
     def extend(self, mm=None):
         self._set(REACH)
 
     def retract(self):
         self._set(REST)
+
+    def stop(self):
+        pass  # servos hold their last angle
 `;
 
   const linearArm = `"""Linear actuator lift on a motor channel. Uses ADS1115 feedback if present, else timing."""
@@ -319,9 +343,17 @@ class LinearArm:
         mm = max(0.0, min(float(mm), config.ARM_STROKE_MM))
         if self.adc is not None:
             start = time.time()
+            last, last_change = self._read_mm(), time.time()
             while time.time() - start < timeout_s:
-                error = mm - self._read_mm()
+                now = self._read_mm()
+                error = mm - now
                 if abs(error) < 3:
+                    break
+                if abs(now - last) > 1:
+                    last, last_change = now, time.time()
+                elif time.time() - last_change > 2:
+                    # No movement for 2 s: stalled, at its end stop, or the feedback wire is loose.
+                    print("arm: feedback not changing, stopping for safety")
                     break
                 self.channel.run(power if error > 0 else -power)
                 time.sleep(0.02)
@@ -336,6 +368,9 @@ class LinearArm:
 
     def extend(self, mm=None):
         self.move_to(config.ARM_STROKE_MM if mm is None else mm)
+
+    def stop(self):
+        self.channel.stop()
 
     def retract(self):
         self.move_to(0)
@@ -437,7 +472,10 @@ def sensors():
   const stepLines = design.routine.map((s) => {
     const t = s.target ? py(s.target) : "None";
     switch (s.op) {
-      case "goto": return s.target ? `    drive.follow(config.WAYPOINTS.get(${t}, []))  # goto ${s.target}` : "    pass  # goto with no target";
+      case "goto": {
+        const leg = s.target ? legFor(s.target) : -1;
+        return leg >= 0 ? `    drive.follow(config.LEGS[${leg}])  # goto ${s.target}` : `    pass  # goto ${s.target ?? "(no target)"}: no path from the simulation`;
+      }
       case "extend_arm": return arm ? `    arm.extend(${s.value ?? "None"})` : "    pass  # extend_arm: no arm";
       case "retract_arm": return arm ? "    arm.retract()" : "    pass  # retract_arm: no arm";
       case "grip": return hasGripper ? "    gripper.grip()" : "    pass  # grip: no gripper";
@@ -472,7 +510,7 @@ def sensors():
     hasCamera ? "    camera = Camera()" : "",
   ].filter(Boolean);
 
-  const main = `"""Runs the routine for: ${task.prompt.replace(/"/g, "'")}
+  const main = `"""Runs the routine for the task in config.TASK.
 Generated from the design. This code has not been tested on hardware.
 Test with the wheels off the ground first. Press Ctrl+C to stop.
 """
@@ -484,7 +522,7 @@ ${setup.join("\n")}
     try:
 ${stepLines.map((l) => "    " + l).join("\n") || "        pass"}
     finally:
-        drive.stop()${hasPump ? "\n        pump.off()" : ""}
+        drive.stop()${arm ? "\n        arm.stop()" : ""}${hasPump ? "\n        pump.off()" : ""}
 
 
 if __name__ == "__main__":

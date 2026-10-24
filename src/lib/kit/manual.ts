@@ -9,7 +9,7 @@ import { generateWithFallback, parseJsonText } from "../gemini";
 import { MODELS } from "../models";
 import { buyRows } from "./buylist";
 
-const Steps = z.array(z.object({ title: z.string().min(1).max(80), body: z.string().min(1).max(600) })).min(4).max(14);
+const Steps = z.array(z.object({ title: z.string().min(1).max(80), body: z.string().min(1).max(600) })).min(3).max(14);
 export type Step = z.infer<typeof Steps>[number];
 
 export function templateSteps(design: Design, catalog: Part[]): Step[] {
@@ -28,7 +28,13 @@ export function templateSteps(design: Design, catalog: Part[]): Step[] {
       : "Assemble the arm kit, centre every servo before fitting the horns, then bolt the arm to the front of the deck. Plug the servos into the PCA9685 channels in wiring.md.",
   });
   if (has("tool")) steps.push({ title: "Fit the tool", body: "Attach the tool (pump nozzle, gripper or camera mount) to the arm tip or deck. For water, keep the tank and tubing away from the electronics and add a drip loop." });
-  if (has("sensor")) steps.push({ title: "Add the sensors", body: "Mount the camera and distance sensors facing forward. Use 3.3V power for sensors whose outputs go to Pi pins." });
+  if (has("sensor")) {
+    const fiveVoltEcho = r.parts.some((p) => /hcsr04/.test(p.id));
+    steps.push({
+      title: "Add the sensors",
+      body: `Mount the camera and distance sensors facing forward. Use 3.3V power for sensors whose outputs go to Pi pins.${fiveVoltEcho ? " The HC-SR04's ECHO pin outputs 5V: put a voltage divider (1k and 2k resistors) on it before the Pi pin." : ""}`,
+    });
+  }
   steps.push(
     { title: "Wire the power", body: "Follow the power diagram in wiring.md: battery to regulator to the Pi's 5V pins, and the motor supply straight to the driver. Join all grounds. Double-check polarity before plugging anything in." },
     { title: "Install the software", body: "Copy the pi/ folder to the Pi, then run: pip install -r requirements.txt. Run python3 selftest.py with the wheels off the ground." },
@@ -42,8 +48,9 @@ async function geminiSteps(design: Design, task: Task, catalog: Part[]): Promise
   const prompt = `Write assembly steps for a small wheeled Raspberry Pi robot built for: ${JSON.stringify(task.prompt)}.
 Parts:
 ${parts}
-Rules: 6-12 steps, in build order, plain English for beginners, each body 1-3 sentences.
-Mention wiring.md for pin numbers instead of inventing pins. Keep motor and logic power separate.
+Rules: 4-8 MECHANICAL assembly steps only (chassis, mounting boards, arm, tool, tank, sensors), in build order,
+plain English for beginners, each body 1-3 sentences. Do NOT write any wiring, power, battery or voltage steps:
+those are added separately from a checked template.
 Return ONLY a JSON array of {"title": string, "body": string}.`;
   const res = await generateWithFallback(
     { model: MODELS.CHEAP, contents: prompt, config: { responseMimeType: "application/json", temperature: 0.3 } },
@@ -52,10 +59,28 @@ Return ONLY a JSON array of {"title": string, "body": string}.`;
   return Steps.parse(parseJsonText(res.text));
 }
 
+/** Wiring and power steps always come from the template, never from Gemini, because a wrong one can destroy the Pi. */
+const ELECTRICAL = /\b(wir(e|es|ing)|batter(y|ies)|volts?|voltage|gpio|header|regulator|solder|in parallel)\b/i;
+
 export async function manualSteps(design: Design, task: Task, catalog: Part[], useGemini: boolean): Promise<{ steps: Step[]; source: "gemini" | "template" }> {
   if (useGemini) {
     try {
-      return { steps: await geminiSteps(design, task, catalog), source: "gemini" };
+      const template = templateSteps(design, catalog);
+      // Keep Gemini's mechanical sentences; drop any sentence about wiring or power.
+      const mechanical = (await geminiSteps(design, task, catalog))
+        .map((st) => ({ ...st, body: st.body.split(/(?<=[.!?])\s+/).filter((x) => !ELECTRICAL.test(x)).join(" ") }))
+        .filter((st) => st.body && !ELECTRICAL.test(st.title));
+      const pick = (...titles: string[]) => template.filter((st) => titles.includes(st.title));
+      if (mechanical.length >= 3) {
+        return {
+          steps: [
+            ...pick("Check the parts"),
+            ...mechanical,
+            ...pick("Wire the motor driver", "Add the sensors", "Wire the power", "Install the software", "First run"),
+          ],
+          source: "gemini",
+        };
+      }
     } catch (e) {
       console.warn("[kit] manual steps fell back to template:", (e as Error).message.slice(0, 120));
     }

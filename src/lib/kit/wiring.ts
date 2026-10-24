@@ -2,6 +2,18 @@
 import type { Design, Part } from "../contracts";
 import type { Derived } from "../data";
 import { isBattery, isRegulator, resolveParts } from "../derive";
+import { DRIVER_PIN_ROLES, sensorPinRoles } from "./pi";
+
+/** "GPIO17" -> "GPIO17 = AIN1" using the part's pin roles, so nobody swaps TRIG and ECHO. */
+function labelPins(part: Part | undefined, pins: string[]): string[] {
+  if (!part) return pins;
+  const roles =
+    part.category === "motor_driver" ? DRIVER_PIN_ROLES[part.id] :
+    part.category === "sensor" && part.caps.interface === "gpio" ? sensorPinRoles(part) : undefined;
+  if (!roles) return pins;
+  let i = 0;
+  return pins.map((p) => (/^GPIO\d+$/.test(p) && roles[i] ? `${p} = ${roles[i++]}` : p));
+}
 
 export function wiringMd(design: Design, derived: Derived, catalog: Part[]): string {
   const r = resolveParts(design, catalog);
@@ -13,7 +25,9 @@ export function wiringMd(design: Design, derived: Derived, catalog: Part[]): str
   const drivers = r.parts.filter((p) => p.category === "motor_driver");
   const servoBoard = r.parts.find((p) => /pca9685/i.test(p.id));
 
-  const pinRows = derived.pinMap.map((m) => `| ${name(m.partId)} | \`${m.partId}\` | ${m.pins.join(", ")} |`).join("\n");
+  const pinRows = derived.pinMap
+    .map((m) => `| ${name(m.partId)} | \`${m.partId}\` | ${labelPins(catalog.find((p) => p.id === m.partId), m.pins).join(", ")} |`)
+    .join("\n");
 
   const power: string[] = [];
   if (usbPack) power.push(`[${usbPack.name}] --USB-C--> [Raspberry Pi]`);
@@ -22,6 +36,9 @@ export function wiringMd(design: Design, derived: Derived, catalog: Part[]): str
     else power.push(`[${mainBattery.name}] --+`);
     for (const d of drivers) power.push(`                     +--> [${d.name}] motor supply (VM / VIN)`);
     if (servoBoard) power.push(`                     +--> (5-6V step-down) --> [${servoBoard.name}] V+ servo rail`);
+  }
+  if (!usbPack && !(regulator && mainBattery && (mainBattery.caps.outputV ?? 0) > 5.5)) {
+    power.push("", "WARNING: this design has no working 5V supply for the Raspberry Pi. Add a 5V regulator fed from a 6V+ battery.");
   }
   power.push("", "All grounds (battery -, regulator GND, driver GND, servo board GND, Pi GND) must be connected together.");
 

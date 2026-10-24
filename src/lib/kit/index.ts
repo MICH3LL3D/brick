@@ -11,6 +11,15 @@ import { manualHtml, manualSteps } from "./manual";
 import { piFiles, type KitFile } from "./pi";
 import { wiringMd } from "./wiring";
 
+/** Checks the generated code depends on. If any fails, the pin or channel mapping is not real. */
+const BLOCKING_CHECKS = ["part-ids", "structure", "motor-channels", "pin-budget", "pwm-board"];
+
+export class KitCheckError extends Error {
+  constructor(public errors: string[]) {
+    super(`The design fails checks the kit depends on:\n${errors.join("\n")}`);
+  }
+}
+
 export class KitCompileError extends Error {
   constructor(public errors: string[]) {
     super(`Generated code failed to compile:\n${errors.join("\n")}`);
@@ -63,6 +72,11 @@ ${failed.length ? `\n## Checks that failed for this design\n\n${failed.map((f) =
 
 export async function buildKit(design: Design, task: Task, room: Room, catalog: Part[], useGemini: boolean): Promise<Buffer> {
   const derived = deriveAndCheck(design, task, room, catalog);
+  const blocking = derived.checks.filter((c) => !c.ok && BLOCKING_CHECKS.includes(c.id)).map((c) => c.message);
+  // The generated code drives one PCA9685 at 0x40, so more than 16 servo channels cannot be wired.
+  const servoChannels = derived.pinMap.flatMap((m) => m.pins).filter((p) => p.startsWith("PCA9685 ch")).length;
+  if (servoChannels > 16) blocking.push(`The kit supports one servo board (16 channels); this design needs ${servoChannels}.`);
+  if (blocking.length) throw new KitCheckError(blocking);
   const sim = simulate(design, task, room, catalog);
   const code = piFiles(design, task, derived, sim, room, catalog);
 

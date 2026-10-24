@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Design, Task } from "@/lib/contracts";
 import { loadCatalog, loadRoom } from "@/lib/data";
 import { hasGeminiKey, isDemoMode } from "@/lib/gemini";
-import { buildKit, KitCompileError } from "@/lib/kit";
+import { buildKit, KitCheckError, KitCompileError } from "@/lib/kit";
 
 export const maxDuration = 60;
 
@@ -22,6 +22,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (e) {
+    if (e instanceof KitCheckError) {
+      return Response.json({ error: "Fix these checks before downloading the kit.", details: e.errors }, { status: 422 });
+    }
     console.error("[kit]", e);
     const message = e instanceof KitCompileError ? "The generated code did not pass its compile check, so no kit was made." : "Could not build the kit.";
     return Response.json({ error: message, details: e instanceof KitCompileError ? e.errors : undefined }, { status: 500 });
