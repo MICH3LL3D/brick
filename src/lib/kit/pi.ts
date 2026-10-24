@@ -113,6 +113,7 @@ export function piFiles(design: Design, task: Task, derived: Derived, sim: SimRe
   const hasCamera = r.parts.some(isCamera);
   const hasGripper = r.parts.some(isGripper) && hw.servo.gripper;
   const hasPump = !!hw.uses.pump || !!hw.servo.pump;
+  const hasPanTilt = r.parts.some((p) => p.id === "tool-cam-pantilt") && (hw.servo.pan_tilt?.length ?? 0) > 0;
   const sensors = Object.keys(hw.gpio);
 
   // One leg per sim event: the sim path between the previous event and this one.
@@ -452,6 +453,41 @@ class Camera:
         return path
 `;
 
+  const panTilt = `"""Pan/tilt camera mount: two servos on the PCA9685 (pan first, then tilt).
+Angles are offsets in degrees from straight ahead. They are clamped to safe limits so the
+mount never drives into its end stops or twists the camera ribbon cable.
+"""
+import time
+
+import config
+from drivers.servo_board import kit
+
+CENTER = 90          # servo angle that points the camera straight ahead
+PAN_LIMIT = 60       # degrees left or right of center
+TILT_LIMIT = 30      # degrees up or down of center
+
+
+def _clamp(value, limit):
+    return max(-limit, min(limit, float(value)))
+
+
+class PanTilt:
+    def __init__(self):
+        channels = config.SERVO_CHANNELS.get("pan_tilt", [])
+        self.pan = channels[0] if len(channels) > 0 else None
+        self.tilt = channels[1] if len(channels) > 1 else None
+
+    def look(self, pan=0, tilt=0):
+        if self.pan is not None:
+            kit().servo[self.pan].angle = CENTER + _clamp(pan, PAN_LIMIT)
+        if self.tilt is not None:
+            kit().servo[self.tilt].angle = CENTER + _clamp(tilt, TILT_LIMIT)
+        time.sleep(0.4)  # let the camera settle before a photo
+
+    def center(self):
+        self.look(0, 0)
+`;
+
   const distance = `"""GPIO distance sensors."""
 from gpiozero import DigitalInputDevice, DistanceSensor
 
@@ -483,7 +519,10 @@ def sensors():
       case "pump_on": return hasPump ? (s.value ? `    pump.run(${s.value})` : "    pump.on()") : "    pass  # pump_on: no pump";
       case "pump_off": return hasPump ? "    pump.off()" : "    pass  # pump_off: no pump";
       case "wait": return `    time.sleep(${s.value ?? 1})`;
-      case "photograph": return hasCamera ? `    print("saved", camera.photo(${t === "None" ? '"photo"' : t}))` : "    pass  # photograph: no camera";
+      case "photograph": {
+        const shot = hasCamera ? `    print("saved", camera.photo(${t === "None" ? '"photo"' : t}))` : "    pass  # photograph: no camera";
+        return hasPanTilt ? `    pan_tilt.center()\n    ${shot}` : shot;
+      }
       case "return_home": return "    drive.follow(config.HOME_PATH or [config.HOME])";
     }
   });
@@ -498,6 +537,7 @@ def sensors():
       hasPump ? "from drivers.pump import Pump" : "",
       hasGripper ? "from drivers.gripper import Gripper" : "",
       hasCamera ? "from drivers.camera import Camera" : "",
+      hasPanTilt ? "from drivers.pan_tilt import PanTilt" : "",
       sensors.length ? "from drivers.distance import sensors" : "",
     ].filter(Boolean),
   ];
@@ -508,6 +548,7 @@ def sensors():
     hasPump ? "    pump = Pump()" : "",
     hasGripper ? "    gripper = Gripper()" : "",
     hasCamera ? "    camera = Camera()" : "",
+    hasPanTilt ? "    pan_tilt = PanTilt()" : "",
   ].filter(Boolean);
 
   const main = `"""Runs the routine for the task in config.TASK.
@@ -536,6 +577,7 @@ if __name__ == "__main__":
     !linear && arm ? `    check("servo arm", lambda: (arm.extend(), arm.retract()))` : "",
     hasPump ? `    check("pump (0.5 s)", lambda: pump.run(0.5))` : "",
     hasGripper ? `    check("gripper", lambda: (gripper.grip(), gripper.release()))` : "",
+    hasPanTilt ? `    check("pan/tilt mount", lambda: (pan_tilt.look(-15, 0), pan_tilt.look(15, 0), pan_tilt.look(0, -10), pan_tilt.look(0, 10), pan_tilt.center()))` : "",
     hasCamera ? `    check("camera", lambda: print("   saved", camera.photo("selftest")))` : "",
     sensors.length ? `    check("distance sensors", read_sensors)` : "",
   ].filter(Boolean);
@@ -606,6 +648,7 @@ if __name__ == "__main__":
   if (hasPump) files.push({ path: "pi/drivers/pump.py", content: pump });
   if (hasGripper) files.push({ path: "pi/drivers/gripper.py", content: gripper });
   if (hasCamera) files.push({ path: "pi/drivers/camera.py", content: camera });
+  if (hasPanTilt) files.push({ path: "pi/drivers/pan_tilt.py", content: panTilt });
   if (sensors.length) files.push({ path: "pi/drivers/distance.py", content: distance });
   return files;
 }
