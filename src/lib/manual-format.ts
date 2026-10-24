@@ -30,10 +30,18 @@ export const SeeRef = z.object({ book: BookId, page: z.number().int().min(1), la
 // https or a local /path only, so a model-written URL cannot point at a random tracker.
 const Src = z.string().regex(/^(https:\/\/|\/(?![\/\\]))/);
 
-/** Art slot. Photos need a licence that allows reuse and a credit line (e.g. CC BY) shown on the page. */
+/** Drawn action icons for steps that show no part (see components/PartArt.tsx). */
+export const IconName = z.enum(["laptop", "wire", "multimeter", "screwdriver", "wifi", "check", "power", "terminal", "sdcard", "header", "tools"]);
+export type IconNameT = z.infer<typeof IconName>;
+
+/**
+ * Art slot. Photos need a licence that allows reuse and a credit line (e.g. CC BY) shown on the page.
+ * `part` is a drawing of the part's kind (used when no verified photo exists); `icon` is a drawn action icon.
+ */
 export const Art = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("photo"), src: Src, credit: z.string().optional() }),
   z.object({ kind: z.literal("part"), partId: z.string() }),
+  z.object({ kind: z.literal("icon"), name: IconName }),
 ]);
 
 /** One slot in the parts box at the top of a page: exactly what this page needs. */

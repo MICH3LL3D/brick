@@ -1,15 +1,17 @@
-import { bookMeta, BOOKS, type ManualPageT } from "@/lib/manual-format";
+import { bookMeta, BOOKS, type IconNameT, type ManualPageT } from "@/lib/manual-format";
+import { Illustration } from "./PartArt";
 import { WiringDiagram } from "./WiringDiagram";
 
 const WIRE: Record<string, string> = { red: "#D94F41", black: "#222B26", orange: "#E8813A", blue: "#4179C7", yellow: "#E4B73A", white: "#FFFFFF", green: "#3E9E63", purple: "#865BB4", brown: "#774A28", grey: "#A9A9A0" };
 
-type Art = { kind: "photo"; src: string; credit?: string } | { kind: "part"; partId: string } | undefined;
+type Art = { kind: "photo"; src: string; credit?: string } | { kind: "part"; partId: string } | { kind: "icon"; name: IconNameT } | undefined;
 
-// shortcut: art slots without a photo show a labelled placeholder; the wire diagrams drawn over board photos come from the manual generator, not this viewer.
+// Photo when one was verified, otherwise a drawing of the part or action, so no slot is empty. Drawings carry a small caption.
 const ArtBox = ({ art, label }: { art?: Art; label?: string }) =>
   art?.kind === "photo"
     // eslint-disable-next-line @next/next/no-img-element
     ? <><img className="m-photo" referrerPolicy="no-referrer" src={art.src} alt={label ?? ""} />{art.credit && <small className="m-credit">{art.credit}</small>}</>
+    : art ? <div className="m-art"><Illustration partId={art.kind === "part" ? art.partId : undefined} icon={art.kind === "icon" ? art.name : undefined} label={label} /><small className="m-credit">{art.kind === "part" ? "Drawing, not a photo of your exact part" : "Illustration"}</small></div>
     : <div className="m-art">{label ?? "Diagram"}</div>;
 
 const SeeTag = ({ r, onOpen }: { r: { book: ManualPageT["book"]; page: number; label: string }; onOpen: (book: ManualPageT["book"], page: number) => void }) => (
@@ -29,7 +31,7 @@ export function ManualPage({ page, total, onOpen }: { page: ManualPageT; total: 
         {intro && <h2 className="m-h1">{page.title}</h2>}
         {page.parts.length > 0 && (
           <div className="m-partsbox">
-            {page.parts.map((p) => <div key={p.label}><b>{p.qty}x</b>{p.art?.kind === "photo" && /* eslint-disable-next-line @next/next/no-img-element */ <img className="m-thumb" src={p.art.src} alt="" />}<span>{p.label}</span></div>)}
+            {page.parts.map((p) => <div key={p.label}><b>{p.qty}x</b>{p.art?.kind === "photo" && /* eslint-disable-next-line @next/next/no-img-element */ <img className="m-thumb" src={p.art.src} alt="" />}{p.art && p.art.kind !== "photo" && <span className="m-thumb"><Illustration partId={p.art.kind === "part" ? p.art.partId : undefined} icon={p.art.kind === "icon" ? p.art.name : undefined} /></span>}<span>{p.label}</span></div>)}
           </div>
         )}
       </div>
@@ -53,7 +55,7 @@ export function ManualPage({ page, total, onOpen }: { page: ManualPageT; total: 
         <>
           {page.wires.some((w) => w.a && w.b) ? <WiringDiagram wires={page.wires} /> : (
             <>
-              {page.photo ? <ArtBox art={{ kind: "photo", src: page.photo.src, credit: page.photo.credit }} label="Board" /> : <div className="m-art tall">Board and wire diagram</div>}
+              {page.photo ? <ArtBox art={{ kind: "photo", src: page.photo.src, credit: page.photo.credit }} label="Board" /> : <ArtBox art={{ kind: "icon", name: page.gauge ? "multimeter" : "wire" }} label="Wiring" />}
               <ul className="m-wires">
                 {page.wires.map((w) => (
                   <li key={`${w.from}${w.to}`} style={{ opacity: w.isNew ? 1 : 0.45 }}>

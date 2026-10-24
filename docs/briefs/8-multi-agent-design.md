@@ -123,7 +123,7 @@ No change to `contracts.ts`. Agent-internal types live in `src/lib/agents/`.
 
 `POST /api/part-images { partIds, labels? }` returns `{ images, labels }`. Per part, in order:
 1. Page agent (code): reads `og:image`, `twitter:image` or JSON-LD `image` from the vendor page.
-2. Search agent (Gemini + Google Search): proposes image URLs when the page gives none.
+2. Search agent (Gemini + Google Search): proposes image URLs and product pages when the vendor page gives none; the pages are read for images too (one search call serves both).
 3. Verifier agent (Gemini vision): looks at each candidate and rejects wrong parts, bundles, logos and watermarked or tiny pictures. An unverified photo is never used.
 Before the verifier, code checks the picture's pixel size from its file header (`src/lib/images/size.ts`): both sides at least 200 px and at most 8000 px, and a width to height ratio between 0.4 and 2.5. Tiny thumbnails, banners and unreadable files are skipped without a Gemini call.
 4. Label agent (Gemini): maps parts-box labels ("Raspberry Pi 4") to catalog parts. Labels that name no part ("Your laptop") map to nothing.
