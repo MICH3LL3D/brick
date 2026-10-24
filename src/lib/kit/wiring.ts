@@ -1,7 +1,7 @@
 // wiring.md: pin table from Derived.pinMap, a text power diagram, and per-part notes.
 import type { Design, Part } from "../contracts";
 import type { Derived } from "../data";
-import { isBattery, isRegulator, resolveParts } from "../derive";
+import { isBattery, isRegulator, MIN_REGULATOR_INPUT_V, resolveParts } from "../derive";
 import { DRIVER_PIN_ROLES, sensorPinRoles } from "./pi";
 
 /** "GPIO17" -> "GPIO17 = AIN1" using the part's pin roles, so nobody swaps TRIG and ECHO. */
@@ -37,7 +37,7 @@ export function wiringMd(design: Design, derived: Derived, catalog: Part[]): str
     for (const d of drivers) power.push(`                     +--> [${d.name}] motor supply (VM / VIN)`);
     if (servoBoard) power.push(`                     +--> (5-6V step-down) --> [${servoBoard.name}] V+ servo rail`);
   }
-  if (!usbPack && !(regulator && mainBattery && (mainBattery.caps.outputV ?? 0) > 5.5)) {
+  if (!usbPack && !(regulator && mainBattery && (mainBattery.caps.outputV ?? 0) >= MIN_REGULATOR_INPUT_V)) {
     power.push("", "WARNING: this design has no working 5V supply for the Raspberry Pi. Add a 5V regulator fed from a 6V+ battery.");
   }
   power.push("", "All grounds (battery -, regulator GND, driver GND, servo board GND, Pi GND) must be connected together.");

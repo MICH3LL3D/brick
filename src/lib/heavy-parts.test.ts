@@ -77,16 +77,22 @@ test("wheel motors above the driver rating only warn, they do not fail motor-cur
   assert.match(c.message, /may cut out/);
 });
 
-test("pot-feedback arm without an ADC fails arm-feedback; with one it passes", () => {
+test("pot-feedback arm without an ADC passes arm-feedback with a timing warning", () => {
   const without = derive([...CORE, "md-motor-hat", POT_ARM.id]);
   const c = check(without, "arm-feedback")!;
-  assert.equal(c.ok, false);
-  assert.match(c.message, /ADS1115/);
-  assert.equal(check(derive([...CORE, "md-motor-hat", POT_ARM.id, "adc-ads1115"]), "arm-feedback")?.ok, true);
+  assert.equal(c.ok, true);
+  assert.match(c.message, /runs on timing/);
+  assert.match(c.message, /adc-ads1115/);
+  const withAdc = check(derive([...CORE, "md-motor-hat", POT_ARM.id, "adc-ads1115"]), "arm-feedback")!;
+  assert.equal(withAdc.ok, true);
+  assert.doesNotMatch(withAdc.message, /Warning/);
 });
 
-test("buildKit refuses a pot-feedback arm without an ADC", async () => {
-  await assert.rejects(buildKit(design([...CORE, "md-motor-hat", POT_ARM.id]), task, room, all, false), KitCheckError);
+test("hall-feedback arm with no pins fails arm-feedback; buildKit refuses an overloaded actuator channel", async () => {
+  const noPins = fake("arm-lact10p", "arm-hall-nopins-test", { feedback: "hall", pins: 0 });
+  const d = deriveAndCheck(design([...CORE, "md-motor-hat", noPins.id]), task, room, [...all, noPins]);
+  assert.equal(check(d, "arm-feedback")?.ok, false);
+  await assert.rejects(buildKit(design([...CORE, "md-tb6612", BIG_ARM.id, "md-tb6612"]), task, room, all, false), KitCheckError);
 });
 
 test("hall-feedback arm: pin map labels the hall pins and the kit counts pulses", async () => {

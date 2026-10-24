@@ -226,14 +226,16 @@ export function deriveAndCheck(design: Design, task: Task, room: Room, catalog: 
   const fb = arm && isExtendable(arm) ? arm.caps.feedback : undefined;
   if (arm && (fb === "pot" || fb === "hall")) {
     const hallPins = arm.caps.pins ?? 0;
-    const ok = fb === "pot" ? hasAdcPart(parts) : hallPins > 0;
+    // A pot without an ADC still works open-loop (the kit falls back to timing), so it only warns.
+    const hasAdc = hasAdcPart(parts);
+    const ok = fb === "pot" ? true : hallPins > 0;
     add(
       "arm-feedback",
       ok,
       fb === "pot"
-        ? ok
+        ? hasAdc
           ? `The ${arm.name} position sensor is read by the ADC.`
-          : `The ${arm.name} reports its position with a potentiometer, which the Pi cannot read directly. Add an ADS1115 ADC board (adc-ads1115).`
+          : `Warning: without an ADS1115 the ${arm.name} lift runs on timing and may stop a few mm off. Add adc-ads1115 for closed-loop control.`
         : ok
           ? `The ${arm.name} hall sensor uses ${hallPins} GPIO pin${hallPins === 1 ? "" : "s"} to count its travel.`
           : `The ${arm.name} has a hall position sensor but no GPIO pins are set aside for it.`,
